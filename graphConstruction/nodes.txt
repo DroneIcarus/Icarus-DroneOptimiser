@@ -1,0 +1,17 @@
+Current ID:0,Huristic:1334,neighbour:0,cost:0,neighbour:2,cost:145.013792447477,neighbour:3,cost:141.823834386185,neighbour:16,cost:68.9637585982667
+Current ID:1,Huristic:0,neighbour:1,cost:0,neighbour:14,cost:77.0064932327138
+Current ID:2,Huristic:1137,neighbour:0,cost:145.013792447477,neighbour:2,cost:0,neighbour:3,cost:81.3941029804985,neighbour:15,cost:112.111551590369,neighbour:16,cost:78.873316146844
+Current ID:3,Huristic:1142,neighbour:0,cost:141.823834386185,neighbour:2,cost:81.3941029804985,neighbour:3,cost:0,neighbour:15,cost:79.2085853932514,neighbour:16,cost:105.004761796787
+Current ID:4,Huristic:921,neighbour:4,cost:0,neighbour:5,cost:90.8240056372763,neighbour:11,cost:139.71757226634,neighbour:15,cost:78.4920378127616
+Current ID:5,Huristic:868,neighbour:4,cost:90.8240056372763,neighbour:5,cost:0,neighbour:10,cost:107.074740251845,neighbour:15,cost:133.154046127033
+Current ID:6,Huristic:580,neighbour:6,cost:0,neighbour:7,cost:141.735669469615,neighbour:11,cost:134.714512952391,neighbour:12,cost:135.070352039224
+Current ID:7,Huristic:543,neighbour:6,cost:141.735669469615,neighbour:7,cost:0,neighbour:10,cost:136.124942607885,neighbour:13,cost:135.532283976918
+Current ID:8,Huristic:217,neighbour:8,cost:0,neighbour:9,cost:112.294256309038,neighbour:12,cost:130.357201565545,neighbour:14,cost:77.4661216274573
+Current ID:9,Huristic:201,neighbour:8,cost:112.294256309038,neighbour:9,cost:0,neighbour:13,cost:124.310096130604,neighbour:14,cost:123
+Current ID:10,Huristic:719,neighbour:5,cost:107.074740251845,neighbour:7,cost:136.124942607885,neighbour:10,cost:0,neighbour:11,cost:135.428948161019
+Current ID:11,Huristic:750,neighbour:4,cost:139.71757226634,neighbour:6,cost:134.714512952391,neighbour:10,cost:135.428948161019,neighbour:11,cost:0
+Current ID:12,Huristic:398,neighbour:6,cost:135.070352039224,neighbour:8,cost:130.357201565545,neighbour:12,cost:0,neighbour:13,cost:142.562267097574
+Current ID:13,Huristic:360,neighbour:7,cost:135.532283976918,neighbour:9,cost:124.310096130604,neighbour:12,cost:142.562267097574,neighbour:13,cost:0
+Current ID:14,Huristic:108,neighbour:1,cost:77.0064932327138,neighbour:8,cost:77.4661216274573,neighbour:9,cost:123,neighbour:14,cost:0
+Current ID:15,Huristic:1030,neighbour:2,cost:112.111551590369,neighbour:3,cost:79.2085853932514,neighbour:4,cost:78.4920378127616,neighbour:5,cost:133.154046127033,neighbour:15,cost:0
+Current ID:16,Huristic:1248,neighbour:0,cost:68.9637585982667,neighbour:2,cost:78.873316146844,neighbour:3,cost:105.004761796787,neighbour:16,cost:0

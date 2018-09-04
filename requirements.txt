@@ -1,0 +1,10 @@
+# Generate requirements.txt: $ pipreqs /home/project/location
+# To install those dependencies:
+# pip install -r requirements.txt
+
+numpy
+setuptools
+opencv_python
+matplotlib
+networkx
+requests
