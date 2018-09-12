@@ -51,7 +51,7 @@ install_distro_packages()
 	case "$1" in
 	"ubuntu")
 		sudo apt-get update
-		sudo apt-get install build-essential python3-dev python3-pip tk8.6-dev -y
+		sudo apt-get install build-essential python3-dev python3-pip python3-tk tk8.6-dev -y
 		;;
 	*)
 		echo "Error: Your linux distribution is not supported."
@@ -69,7 +69,14 @@ install_python_packages()
 	pipenv install
 }
 
-
+configure_environment()
+{
+	echo '# Configuring Mission Optimizer environment...'
+	echo '##############################################'
+	mkdir logs/
+	mkdir lakeRecognition/satelliteImages/
+	mkdir export/
+}
 
 ###
 # Main installer script
@@ -84,7 +91,7 @@ check_os_disto
 install_distro_packages "$DISTRO"
 
 install_python_packages
-install_icarus_mission_optimizer "$DISTRO"
+configure_environment
 
 echo '# You should now be all set!'
 echo ''
