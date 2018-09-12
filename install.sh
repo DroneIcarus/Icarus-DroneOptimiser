@@ -8,7 +8,7 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 check_root()
 {
     SCRIPT_USER="$(whoami)"
-    if ! [ "$SCRIPT_USER" == "root" ]
+    if [ "$SCRIPT_USER" == "root" ]
     then
         echo "You need to run the script as root"
         echo "Example: sudo .$DIR/install.sh"
@@ -62,17 +62,11 @@ install_distro_packages()
 
 install_python_packages()
 {
-	echo '# Installing python3 dependencies...'
-	echo '######################################################'
+	echo '# Creating virtual environment and Installing python3 dependencies...'
+	echo '#####################################################################'
 	sudo -H pip3 install --upgrade pip
 	sudo -H pip3 install -U pipenv
 	pipenv install
-}
-
-# Example function for Phil. Could be used to configure nodejs and stuff
-install_icarus_mission_optimizer()
-{
-
 }
 
 
@@ -85,7 +79,7 @@ echo '
 #    icarUS Mission Optimizer installer
 ###
 '
-check_root
+#check_root
 check_os_disto
 install_distro_packages "$DISTRO"
 
@@ -96,3 +90,7 @@ echo '# You should now be all set!'
 echo ''
 echo 'If you ever need to add a pip package, add it this way:'
 echo '   pipenv install <package_name>'
+echo ''
+echo ''
+echo 'Enter the virtual environment:'
+echo '   pipenv shell'
