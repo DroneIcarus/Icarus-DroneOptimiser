@@ -1,0 +1,9 @@
+{
+    "accept": true,
+    "droneAutonomy": 20,
+    "droneChargeEfficiency": 20,
+    "droneChargingTime": 60,
+    "droneMaxSpeed": 30,
+    "keepOrder": true,
+    "missionDate": "15-04-2018 12:00:00"
+}

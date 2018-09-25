@@ -3,6 +3,8 @@ import os.path
 import json
 import logging
 from helpers.GPSHelper import distBetweenCoord
+from lakeRecognition.mapClass import Map
+from lakeRecognition.lakeClass import LandingPoint
 
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,12 @@ class MissionItem:
         self.neighbors = {}
         self.isClose = False
         self.nodeId = None
+        self.landingPoint = None
+
+    def setLandingPoint(self, landingPoint):
+        if not isinstance(landingPoint, LandingPoint):
+            sys.exit("Error:setLandingPoint - landingPoint is not a instance of LandingPoint")
+        self.landingPoint = landingPoint
 
     def get_autocontinue(self):
         return self.autoContinue
@@ -111,7 +119,6 @@ class MissionItem:
         self.name = name
 
     def distanceTo(self, missionItem=None, lat=None, long=None):
-
         if isinstance(missionItem, MissionItem):
             return distBetweenCoord(missionItem.get_x(), missionItem.get_y(),
                                     self.x, self.y)
@@ -215,11 +222,16 @@ class Mission:
         # (Phil) Je crois qu'on devrait prend d'autres commandes que seulement 16
         #        et même jeter des execeptions quand c'est un type qui n'est pas pris en compte.
         for idx in range(len(self.missionItems)):
-            if self.missionItems[idx].get_command() == 16 \
-                    or self.missionItems[idx].get_command() == 21 \
-                    or self.missionItems[idx].get_command() == 22:
+            if (self.missionItems[idx].get_command() == 16
+                    or self.missionItems[idx].get_command() == 21
+                    or self.missionItems[idx].get_command() == 22):
                 waypoints.append(self.missionItems[idx].get_coordinate())
-
+            elif (self.missionItems[idx].get_command() == 17):
+                logger.error("The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
+                sys.exit("ERROR: The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
+            else:
+                logger.error("The mission point %d isn't a valid type."%(idx+1))
+                sys.exit("ERROR: The mission point %d isn't a valid type."%(idx+1))
         return waypoints
 
     @staticmethod
@@ -381,7 +393,3 @@ def build_simple_mission_item(lat, lon, item_id):
             ],
             "type": "SimpleItem"
         }
-
-
-
-

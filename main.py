@@ -1,5 +1,7 @@
 #If you ever want to try it in command line:
 #python3 main.py "test.plan" "testGenerated"
+#python3 main.py "testPlanVol/test4.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneSpeed":40,"keepOrder":true,"missionDate":"15-04-2018 12:00:00"}'
+
 
 import sys, os
 import logging
@@ -30,16 +32,24 @@ if __name__ == "__main__":
     logger.error('error message')
     #logger.critical('critical message')
 
-    if len(sys.argv) <= 1:
+    if len(sys.argv) <= 2:
         sys.exit("ERROR: main.py is missing arguments in Route Optimizer script.")
 
     logger.info("Starting the mission planner...")
     plan = MissionPlan.MissionPlan(sys.argv[1])
 
     logger.debug("points %s", plan.get_mission().get_waypoints())
-    mp = MissionPlanner.MissionPlanner(plan, "nameTest")
+
+
+    logger.debug("mission settings : " + sys.argv[3])
+    missionSettingsStr = sys.argv[3]
+    missionSettings = json.loads(missionSettingsStr)
+
+
+    mp = MissionPlanner.MissionPlanner(plan, "nameTest", missionSettings)
     # mp.getMissionPointGraph()
     # mp.getMissionPointOrder()
+
     mp.run()
 
     # Once we have all the intermediates waypoints we can rewrite the mission

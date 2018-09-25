@@ -8,94 +8,42 @@ import matplotlib.pyplot as plt
 from TSP.tsp_christofides import CreateGraph, DrawGraph, christofedes
 # from graphConstruction.CreateNode import node_create,node_set_neighbours
 from lakeRecognition.mapClass import Map
-from helpers.WeatherHelper import getOpenWeather
+# from helpers.WeatherHelper import getOpenWeather
 from helpers.GPSHelper import distBetweenCoord, calcMetereologicalDegree, calcVectorDegree
 from aStar.aStar import aStar
 from aStar.Node import Node
 from operator import itemgetter
 from MissionPlanner.MissionPlan import MissionItem, build_simple_mission_item
+from MissionPlanner.LongWeather import LongWeather
 
 logger = logging.getLogger(__name__)
 
-class Weather:
-    def __init__(self, latitude, longitude, time, windDirection, windSpeed, cloudCover):
-        self.__latitude = latitude
-        self.__longitude = longitude
-        self.__checkLatitudeLongitude()
-
-        self.time = time
-        self.windDirection = windDirection
-        self.windSpeed = windSpeed
-        self.cloudCover = cloudCover
-
-    def __checkLatitudeLongitude(self):
-        if self.__latitude == None or self.__longitude == None:
-            print("ERROR - Coordinates for generating the weather point is not valid")
-            sys.exit()
-
-class WeatherList:
-    def __init__(self, latitude, longitude):
-        self.__latitude = latitude
-        self.__longitude = longitude
-        self.__checkLatitudeLongitude()
-        self.__longWeather = getOpenWeather(self.__latitude, self.__longitude);
-
-    def __checkLatitudeLongitude(self):
-        if self.__latitude == None or self.__longitude == None:
-            print("ERROR - Coordinates for generating the weatherList is not valid")
-            sys.exit()
-
-    def __checkExpectedTime(self, expectedTime, timeIndex):
-        #86400 is equivalent to one day
-        if(abs(self.__longWeather["time"][timeIndex] - expectedTime) > 86400):
-            print("No precise weather near the expected time...")
-            sys.exit()
-
-    def getWeather(self, expectedTime):
-        timeIndex = self.__longWeather["time"].index(min(self.__longWeather["time"], key=lambda x: abs(x -expectedTime)))
-        self.__checkExpectedTime(expectedTime, timeIndex)
-        return Weather(self.__latitude, self.__longitude, self.__longWeather["time"][timeIndex], self.__longWeather["windDirection"][timeIndex],
-                        self.__longWeather["windSpeed"][timeIndex], self.__longWeather["cloudCover"][timeIndex])
-
-    def getWindSpeed(self, expectedTime):
-        timeIndex = self.__longWeather["time"].index(min(self.__longWeather["time"], key=lambda x: abs(x -expectedTime)))
-        self.__checkExpectedTime(expectedTime, timeIndex)
-        return self.__longWeather["windSpeed"][timeIndex]
-
-    def getWindDirection(self, expectedTime):
-        timeIndex = self.__longWeather["time"].index(min(self.__longWeather["time"], key=lambda x: abs(x -expectedTime)))
-        self.__checkExpectedTime(expectedTime, timeIndex)
-        return self.__longWeather["windDirection"][timeIndex]
-
-    def getCloudCover(self, expectedTime):
-        timeIndex = self.__longWeather["time"].index(min(self.__longWeather["time"], key=lambda x: abs(x -expectedTime)))
-        self.__checkExpectedTime(expectedTime, timeIndex)
-        return self.__longWeather["cloudCover"][timeIndex]
-
 class MissionPlanner(object):
     """docstring for ."""
-    def __init__(self, plan, name):
+    def __init__(self, plan, name, missionSettings):
         super(MissionPlanner, self).__init__()
         self.missionName = name
+        self.missionSettings = missionSettings
+        self.__timeAutonomy = missionSettings["droneAutonomy"] #minute
+        self.__currentAutonomy = self.__timeAutonomy
+        self.__chargingTime = missionSettings["droneChargingTime"] #minute
+        self.__chargeEfficiency = missionSettings["droneChargeEfficiency"] / 10
         self.missionPlan = plan
         gpsPointsList = plan.get_mission().get_waypoints()
         self.maximalMapPoint = self.__getMaximalMapPoint(gpsPointsList)
         self.nbMissionPoint = len(gpsPointsList)
         self.initialMissionItemList = plan.get_mission().get_missionitems()
 
-        self.timeInMission = time.time()
+        self.timeInMission = time.time() # todo : take from missionSettings
         self.timeSpentInMission = 0
-        self.droneSpeed = 40 #km/h
+        self.droneSpeed = missionSettings["droneMaxSpeed"] #km/h
 
-        self.weather = WeatherList(self.initialMissionItemList[0].get_x(), self.initialMissionItemList[0].get_y())
-        currentWeather = self.weather.getWeather(self.timeInMission)
+        self.weather = LongWeather(self.initialMissionItemList[0].get_x(), self.initialMissionItemList[0].get_y())
 
         self.distanceMatrix = self.__getDistanceMatrix()
         self.__missionIndex = 0
 
-        self.__timeAutonomy = 15 #minute
-        self.__currentAutonomy = self.__timeAutonomy
-        self.__ChargingTime = 60 #minute
+
 
         #For the missionBuilders
         self.finalMissionItemList = [];
@@ -128,17 +76,13 @@ class MissionPlanner(object):
         else:
                 speedDrone = self.droneSpeed + windEffect
 
-        # print("ddrone", ddrone)
-        # print("dwind", dwind)
-        # print("deltaDirection", deltaDirection)
-        # print("speedWind", speedWind)
-        # print("windEffect", windEffect)
-        # print("speedDrone", speedDrone)
-
         if speedDrone < 10:
             logger.error("The wind is too strong to execute the mission")
             sys.exit("ERROR: The wind is too strong to execute the mission")
         return speedDrone
+
+    def getCloudCover(self):
+        return self.weather.getCloudCover(self.timeInMission)
 
     def getTimeToFly(self, mItem, mItem2):
         droneSpeed = self.getDroneSpeedAfterWindEffect(mItem, mItem2)
@@ -252,9 +196,7 @@ class MissionPlanner(object):
 
         [lake.cropContour(imageProcessed,map1) for lake in lakeList]
 
-        weather = getOpenWeather(map1.verticalCenter,map1.horizontalCenter)
-
-        [lake.findLandingPoint(weather,int(time.time())) for lake in lakeList]
+        [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in lakeList]
 
         self.__sortLakeList(lakeList)
 
@@ -276,9 +218,7 @@ class MissionPlanner(object):
 
         [lake.cropContour(imageProcessed,map1) for lake in lakeList]
 
-        weather = getOpenWeather(map1.verticalCenter,map1.horizontalCenter)
-
-        [lake.findLandingPoint(weather,int(time.time())) for lake in lakeList]
+        [lake.findLandingPoint(self.weather.getLongWeather(),int(time.time()), self.__chargingTime*60) for lake in lakeList]
         self.__sortLakeList(lakeList)
 
         self.__exportLakesCenter(lakeList)
@@ -298,7 +238,6 @@ class MissionPlanner(object):
 
         # Start landing point
         missionItemStart.setID('start')
-        # missionItemStart.setDistanceEnd(missionItemStart.distanceTo(lat=missionItemEnd.get_x(), long=missionItemEnd.get_y()))
         missionItemStart.setDistanceEnd(self.getTimeToFly(missionItemStart, missionItemEnd))
         allNodes['start'] = missionItemStart
 
@@ -306,9 +245,10 @@ class MissionPlanner(object):
             gpsLandingPoints = lakeList[x].getSortLandingPoint(self.droneSpeed*(distanceMax/60))
 
             for y in range(0, len(gpsLandingPoints)):
-                missionItem = MissionItem(build_simple_mission_item(gpsLandingPoints[y][0], gpsLandingPoints[y][1],'lac_id:' + str(x) + ':' + str(y)))
+                gpsLanding = gpsLandingPoints[y].gpsLandingCoordinate
+                missionItem = MissionItem(build_simple_mission_item(gpsLanding[0], gpsLanding[1],'lac_id:' + str(x) + ':' + str(y)))
                 missionItem.setID('lac_id:' + str(x) + ':' + str(y))
-                # missionItem.setDistanceEnd(missionItem.distanceTo(lat=missionItemEnd.get_x(), long=missionItemEnd.get_y()))
+                missionItem.setLandingPoint(gpsLandingPoints[y])
                 missionItem.setDistanceEnd(self.getTimeToFly(missionItem, missionItemEnd))
                 allNodes['lac_id:' + str(x) + ':' + str(y)] = missionItem
 
@@ -318,11 +258,9 @@ class MissionPlanner(object):
         nodes = allNodes.values()
         for node1 in nodes:
             for node2 in nodes:
-                # distance = node1.distanceTo(missionItem=node2)
                 distance = self.getTimeToFly(node1, node2)
                 if (distance < distanceMax):
                         neighbors = list(node1.neighbors.items())
-                        # node1.AddNeighbor(node2.nodeId, node1.distanceTo(missionItem=node2))
                         node1.AddNeighbor(node2.nodeId, self.getTimeToFly(node1, node2))
 
     def __getAStarNodes(self, start, end, lakeList):
@@ -383,7 +321,8 @@ class MissionPlanner(object):
         toExport = [['latitude','longitude','name']]
         i=0
         for lake in lakeList:
-            for point in lake.getSortLandingPoint(self.droneSpeed*(self.__timeAutonomy/60)):
+            for landingPoint in lake.getSortLandingPoint(self.droneSpeed*(self.__timeAutonomy/60)):
+                point = landingPoint.gpsLandingCoordinate
                 toExport.append([point[0], point[1], i])
                 pass
             i = i + 1
@@ -399,7 +338,8 @@ class MissionPlanner(object):
         toExport = [['latitude','longitude','name']]
         i=0
         for lake in lakeList:
-            for point in lake.getLandingPoint():
+            for landingPoint in lake.getLandingPoint():
+                point = landingPoint.gpsLandingCoordinate
                 toExport.append([point[0], point[1], i])
                 pass
             i = i + 1
@@ -411,20 +351,20 @@ class MissionPlanner(object):
         logger.debug("Exporting done!")
 
     def __findOptimizedChargingPoint(self, start, end, lakeList):
-        nearestPoint = [start.get_x(), start.get_y()]
+        nearestPoint = start
         nearestDist = 99999
         if len(lakeList) != 0:
             for lake in lakeList:
-                for landingPoint in lake.gpsLandingPoint:
-                    # distStart = distBetweenCoord(landingPoint[0], landingPoint[1], start.get_x(), start.get_y())
-                    distEnd = distBetweenCoord(landingPoint[0], landingPoint[1], end.get_x(), end.get_y())
-                    landingMissionPoint = MissionItem(build_simple_mission_item(landingPoint[0], landingPoint[1], "charging"))
+                for landingPoint in lake.landingList:
+                    landingCoordinate = landingPoint.gpsLandingCoordinate
+                # for landingPoint in lake.gpsLandingPoint:
+                    distEnd = distBetweenCoord(landingCoordinate[0], landingCoordinate[1], end.get_x(), end.get_y())
+                    landingMissionPoint = MissionItem(build_simple_mission_item(landingCoordinate[0], landingCoordinate[1], "charging"))
                     landingMissionPoint.setID('charging')
+                    landingMissionPoint.setLandingPoint(landingPoint)
                     timeToStart = self.getTimeToFly(landingMissionPoint, start)
-                    # timeToEnd = self.getTimeToFly(landingMissionPoint, end)
-                    # if distStart < self.__charge and distEnd < nearestDist:
                     if timeToStart < self.__currentAutonomy and distEnd < nearestDist:
-                        nearestPoint = landingPoint
+                        nearestPoint = landingMissionPoint
                         nearestDist = distEnd
                         pass
                 pass
@@ -448,22 +388,42 @@ class MissionPlanner(object):
 
         return points
 
+    def __setTimeSpentInMission(self, mItem):
+        missionSize = len(self.finalMissionItemList)
+        if missionSize > 0:
+            if mItem.getID() == "wait":
+                self.timeSpentInMission = self.timeSpentInMission + self.__chargingTime
+            else:
+                self.timeSpentInMission = self.timeSpentInMission + self.getTimeToFly(self.finalMissionItemList[missionSize-1], mItem)
+
+    def __setAutonomy(self, timeToFly):
+        timeGivenByCharge = timeToFly * ((100 - self.getCloudCover())/100) * self.__chargeEfficiency
+        timeToSubstract = timeToFly - timeGivenByCharge
+        self.__currentAutonomy = self.__currentAutonomy - timeToSubstract
+
+    def __resetAutonomy(self):
+        self.__currentAutonomy = self.__timeAutonomy
+
     def __addMissionItem(self, missionItem):
         if missionItem.getID() == 'charging':
-            newItemWait = MissionItem(build_simple_mission_item(None, None, 'wait'))
-            newItemTakeOff = MissionItem(build_simple_mission_item(missionItem.get_x(), missionItem.get_y(), 'takeoff'))
+            newItemWait = MissionItem(build_simple_mission_item(missionItem.get_x(), missionItem.get_x(), 'wait'))
+            newItemWait.setID('wait')
+            takeoffCoordinate = missionItem.landingPoint.gpsDeriveCoordinate
+            newItemTakeOff = MissionItem(build_simple_mission_item(takeoffCoordinate[0], takeoffCoordinate[1], 'takeoff'))
+            newItemTakeOff.setID('takeoff')
+            self.__setTimeSpentInMission(missionItem)
             self.finalMissionItemList.append(missionItem)
-            self.resultingWay.append([missionItem.get_x(), missionItem.get_y(), missionItem.get_name()])
-
+            self.__setTimeSpentInMission(newItemWait)
             self.finalMissionItemList.append(newItemWait)
-            self.resultingWay.append([newItemWait.get_x(), newItemWait.get_y(), newItemWait.get_name()])
-
             self.finalMissionItemList.append(newItemTakeOff)
+
+            self.resultingWay.append([missionItem.get_x(), missionItem.get_y(), missionItem.get_name()])
+            self.resultingWay.append([newItemWait.get_x(), newItemWait.get_y(), newItemWait.get_name()])
             self.resultingWay.append([newItemTakeOff.get_x(), newItemTakeOff.get_y(), newItemTakeOff.get_name()])
         else:
+            self.__setTimeSpentInMission(missionItem)
             self.finalMissionItemList.append(missionItem)
             self.resultingWay.append([missionItem.get_x(), missionItem.get_y(), missionItem.get_name()])
-        pass
 
     def __createAndAddMissionItem(self, gpsX, gpsY, idType):
         newItem = MissionItem(build_simple_mission_item(gpsX, gpsY, idType))
@@ -479,16 +439,13 @@ class MissionPlanner(object):
         lastPointVisited = start
 
         while result[i] != end:
-            # dist = distBetweenCoord(lastPointVisited.get_x(), lastPointVisited.get_y(), result[i].get_x(), result[i].get_y())
             timeToFly = self.getTimeToFly(lastPointVisited, result[i])
-            # self.__charge = self.__charge - dist
-            self.__currentAutonomy = self.__currentAutonomy - timeToFly
+            self.__setAutonomy(timeToFly)
             chargingPoint = self.__findOptimizedChargingPoint(result[i], result[i+1], lakeList)
-            chargingPoint = MissionItem(build_simple_mission_item(chargingPoint[0], chargingPoint[1], "charging"))
+            # chargingPoint = MissionItem(build_simple_mission_item(chargingPoint[0], chargingPoint[1], "charging"))
             chargingPoint.setID('charging')
 
-            #Reset the autonomy
-            self.__currentAutonomy = self.__timeAutonomy
+            self.__resetAutonomy()
 
             if(distBetweenCoord(chargingPoint.get_x(), chargingPoint.get_y(), end.get_x(), end.get_y()) < 0.300):
                 #break to assure to not add the end 2 times and we always want to add the real end to keep all the missionItem configuration
@@ -521,14 +478,13 @@ class MissionPlanner(object):
                 if self.__currentAutonomy < self.__timeAutonomy:
                     #Find the optimize charging points
                     chargingPoint = self.__findOptimizedChargingPoint(pairedPoint[0], pairedPoint[1], lakeList)
+                    self.__addMissionItem(chargingPoint)
+                    # self.__createAndAddMissionItem(chargingPoint[0], chargingPoint[1], "charging")
 
-                    self.__createAndAddMissionItem(chargingPoint[0], chargingPoint[1], "charging")
-
-                    #Reset the autonomy
-                    self.__currentAutonomy = self.__timeAutonomy
+                    self.__resetAutonomy()
 
                     #After the charging, execute aStar from the charging point
-                    startPoint = MissionItem(build_simple_mission_item(chargingPoint[0],chargingPoint[1],"start"))
+                    startPoint = MissionItem(build_simple_mission_item(chargingPoint.get_x(),chargingPoint.get_y(),"start"))
                     startPoint.setID('start')
 
                 #Once we have every findLandingPoint and the start point and end point we can generate a graph for A* and run it
@@ -541,8 +497,7 @@ class MissionPlanner(object):
                     sys.exit("ERROR: The last mission point wasn't reach. The mission is probably impossible.")
 
             else:
-                # self.__charge = self.__charge - distanceBetweenPoints
-                self.__currentAutonomy = self.__currentAutonomy - timeToFlyBetweenPoints
+                self.__setAutonomy(timeToFlyBetweenPoints)
                 #Add directly the end point
                 pairedPoint[1].setID('end')
                 self.__addMissionItem(pairedPoint[1])
@@ -559,3 +514,7 @@ class MissionPlanner(object):
         with open(self.exportPath + 'completeMission.csv', 'w') as f:
             writer = csv.writer(f)
             writer.writerows(self.resultingWay)
+
+        timeHour = int(self.timeSpentInMission/60)
+        timeMin = self.timeSpentInMission - (timeHour*60)
+        print("The mission should take %d hour %d min"%(timeHour, timeMin))
