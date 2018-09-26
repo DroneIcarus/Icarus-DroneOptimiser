@@ -12,9 +12,12 @@ def debug(str):
     if debugMode:
         print(str)
 
+class LandingPoint:
+    def __init__(self, landingLat, landingLong, deriveLat, deriveLong):
+        self.gpsLandingCoordinate = (landingLat, landingLong) #array of size 2
+        self.gpsDeriveCoordinate = (deriveLat, deriveLong)
 
 class Lakes:
-
     def __init__(self, lakeContour, lakeArea, resolution):
         self.lakeContour = lakeContour
         self.lakeArea = lakeArea
@@ -22,6 +25,7 @@ class Lakes:
         self.landingPoint = []
         self.gpsLandingPoint = []
         self.width, self.height = self.__getWidthHeight()
+        self.landingList = []
 
     def __getWidthHeight(self):
         x1, y1 = self.lakeContour.min(axis=0)[0]
@@ -30,7 +34,7 @@ class Lakes:
         height = x2 - x1
         return width, height
 
-    def __addSortLandingPoint(self, gpsListPoint, distanceOffset):
+    def __addSortLandingPoint(self, landingList, distanceOffset):
         points = []
         sortList = []
         maxLat = None
@@ -39,26 +43,49 @@ class Lakes:
         minLong = None
         addMorePoint = False
 
-        if len(gpsListPoint) > 0 :
-            maxLat = max(gpsListPoint,key=itemgetter(0))
-            minLat = min(gpsListPoint,key=itemgetter(0))
-            maxLong = max(gpsListPoint,key=itemgetter(1))
-            minLong = min(gpsListPoint,key=itemgetter(1))
+        if len(landingList) > 0 :
 
-            points.append(maxLat)
-            points.append(minLat)
-            points.append(maxLong)
-            points.append(minLong)
+            maxLatLP = max(landingList, key=lambda item: item.gpsLandingCoordinate[0])
+            minLatLP = min(landingList, key=lambda item: item.gpsLandingCoordinate[0])
+            maxLongLP = max(landingList, key=lambda item: item.gpsLandingCoordinate[1])
+            minLatLP = min(landingList, key=lambda item: item.gpsLandingCoordinate[1])
+
+            maxLat = maxLatLP.gpsLandingCoordinate
+            minLat = minLatLP.gpsLandingCoordinate
+            maxLong = maxLongLP.gpsLandingCoordinate
+            minLong = minLatLP.gpsLandingCoordinate
+
+
+            # maxLat = max(gpsListPoint,key=itemgetter(0))
+            # minLat = min(gpsListPoint,key=itemgetter(0))
+            # maxLong = max(gpsListPoint,key=itemgetter(1))
+            # minLong = min(gpsListPoint,key=itemgetter(1))
+
+            # maxLatIndex = gpsListPoint.index(max(gpsListPoint,key=itemgetter(0)))
+            # minLatIndex = gpsListPoint.index(min(gpsListPoint,key=itemgetter(0)))
+            # maxLongIndex = gpsListPoint.index(max(gpsListPoint,key=itemgetter(1)))
+            # minLongIndex = gpsListPoint.index(min(gpsListPoint,key=itemgetter(1)))
+            #
+            # derivePoints.append(self.gpsDerivePoint[maxLatIndex])
+            # derivePoints.append(self.gpsDerivePoint[minLatIndex])
+            # derivePoints.append(self.gpsDerivePoint[maxLongIndex])
+            # derivePoints.append(self.gpsDerivePoint[minLongIndex])
+
+            points.append(maxLatLP)
+            points.append(minLatLP)
+            points.append(maxLongLP)
+            points.append(minLatLP)
 
             #Remove the points near the maximal and minimal points
-            for point in gpsListPoint:
+            for landingPoint in landingList:
+                point = landingPoint.gpsLandingCoordinate
                 if (
                 distBetweenCoord(maxLong[0],maxLong[1], point[0], point[1]) > distanceOffset and
                 distBetweenCoord(minLong[0],minLong[1], point[0], point[1]) > distanceOffset and
                 distBetweenCoord(maxLat[0],maxLat[1], point[0], point[1]) > distanceOffset and
                 distBetweenCoord(minLat[0],minLat[1], point[0], point[1]) > distanceOffset
                 ):
-                    sortList.append(point)
+                    sortList.append(landingPoint)
 
             addMorePoint = distBetweenCoord(maxLong[0],maxLong[1], minLong[0], minLong[1]) > distanceOffset or distBetweenCoord(maxLat[0],maxLat[1], minLat[0], minLat[1]) > distanceOffset
 
@@ -70,7 +97,7 @@ class Lakes:
     def getSortLandingPoint(self, maxDistance):
         points = []
         distanceOffset = maxDistance/2
-        tmpPoints, newSortList, addMorePoint = self.__addSortLandingPoint(self.gpsLandingPoint, distanceOffset)
+        tmpPoints, newSortList, addMorePoint = self.__addSortLandingPoint(self.landingList, distanceOffset)
         points = points + tmpPoints
 
         while addMorePoint:
@@ -146,25 +173,31 @@ class Lakes:
         debug("latlong %s %s" % (lat2, long2))
         return lat2, long2
 
-    def findLandingPoint(self, weatherDict, expectedTime):
+    def findLandingPoint(self, weatherDict, expectedTime, chargingTime):
+        landingPointList = []
         self.landingPoint[:] = []
         self.gpsLandingPoint[:] = []
+        self.gpsDerivePoint = []
+
         timeIndex = weatherDict["time"].index(min(weatherDict["time"], key=lambda x: abs(x - expectedTime)))
-        # print(weatherDict["windDirection"][timeIndex])
+
+        windDir = weatherDict["windDirection"][timeIndex]
+
         if (weatherDict["windDirection"][timeIndex] <= 90):
-            windDir = -weatherDict["windDirection"][timeIndex] + 90
+                windDir = -weatherDict["windDirection"][timeIndex] + 90
         else:
             windDir = -weatherDict["windDirection"][timeIndex] + 450
-        # print(windDir)
-        windDir = 30
-        deriveSpeed = weatherDict["windSpeed"][timeIndex] * 0.02
+
+        deriveSpeed = weatherDict["windSpeed"][timeIndex] * 0.05
+        distanceDeriveKm = deriveSpeed * (chargingTime/3600)
+        # print("vector lenght : %f km    angle: %f"%(distanceDeriveKm, windDir))
+
         # Need to add sun force depending on the time of the year/day, variation of the charging time with cloud cover changing over time
-        # chargingTime = 3600/(1-weatherDict["cloudCover"][timeIndex]*0.01+0.1)
-        chargingTime = 2000
         derive = deriveSpeed * chargingTime // self.resolution
 
-        point2 = [int(-derive * 1.0 * sin(radians(windDir - 10))), int(derive * 1.0 * cos(radians(windDir - 10)))]
-        point3 = [int(-derive * 1.0 * sin(radians(windDir + 10))), int(derive * 1.0 * cos(radians(windDir + 10)))]
+        point2 = [int(derive * 1.0 * sin(radians(windDir - 10))), int(derive * 1.0 * cos(radians(windDir - 10)))]
+        point3 = [int(derive * 1.0 * sin(radians(windDir + 10))), int(derive * 1.0 * cos(radians(windDir + 10)))]
+
         imax = self.contourImage.shape[0]
         jmax = self.contourImage.shape[1]
 
@@ -194,14 +227,33 @@ class Lakes:
                             tempImage2 = np.copy(self.contourImage)
                             cv2.circle(tempImage2,(j, i), 10, 0, -1)
 
+                            tempImage3 = np.copy(self.contourImage)
+
+
                             if (np.array_equal(tempImage, self.contourImage)) and (np.array_equal(tempImage2, self.contourImage)):
                                 self.landingPoint.append([i, j])
+
+                                # print("------------------------------------")
+                                gpsLanding = self.xy2LatLon([j, i])
+                                gpsDerive = self.xy2LatLon([j+point2[1], i+point2[0]])
+
+                                self.landingList.append(LandingPoint(gpsLanding[0], gpsLanding[1], gpsDerive[0], gpsDerive[1]))
+
                                 self.gpsLandingPoint.append(self.xy2LatLon([j, i]))
+                                self.gpsDerivePoint.append(self.xy2LatLon([j+point2[1], i+point2[0]]))
+                                # print("LandingPoint", self.xy2LatLon([j, i]))
+                                # print("Derive point", self.xy2LatLon([j+point2[0], i+point2[1]]))
+
                                 cv2.circle(tempImage2,(i, j), 10, 0, -1)
                                 jdetected = True
                                 idetected = True
                                 lastJ = j
                                 lastI = i
+
+                                #To check the deriveVector
+                                cv2.fillConvexPoly(self.contourImage, point, (122,122,122))
+                                # cv2.imwrite("satelliteImages/" + "vector.jpg", tempImage3)
+
 
 
         for lp in self.landingPoint:
@@ -210,15 +262,14 @@ class Lakes:
         cv2.imwrite("satelliteImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
         # print(len(self.landingPoint))
         # print("There is %d landing point" % (len(self.gpsLandingPoint)))
-        return self.gpsLandingPoint
-
+        return self.landingList
 
     def getLandingPoint(self):
         # temp= []
         # temp.append([self.centerPoint])
         # return temp
 
-        return self.gpsLandingPoint
+        return self.landingList
 
         # return self.getContourPoint()
 
