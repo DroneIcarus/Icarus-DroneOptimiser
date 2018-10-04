@@ -3,5 +3,5 @@
 */__pycache__/*
 logs/
 export/
-lakeRecognition/satelliteImages/*
+lakeRecognition/WaterBodiesImages/*
 

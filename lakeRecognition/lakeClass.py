@@ -252,14 +252,14 @@ class Lakes:
 
                                 #To check the deriveVector
                                 cv2.fillConvexPoly(self.contourImage, point, (122,122,122))
-                                # cv2.imwrite("satelliteImages/" + "vector.jpg", tempImage3)
+                                # cv2.imwrite("WaterBodiesImages/" + "vector.jpg", tempImage3)
 
 
 
         for lp in self.landingPoint:
             self.contourImage[lp[0], lp[1]] = 255
 
-        cv2.imwrite("satelliteImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
+        cv2.imwrite("WaterBodiesImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
         # print(len(self.landingPoint))
         # print("There is %d landing point" % (len(self.gpsLandingPoint)))
         return self.landingList
