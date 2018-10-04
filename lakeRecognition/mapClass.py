@@ -54,7 +54,7 @@ class Map:
         if not success:
             sys.exit("Error: Cannot get satellite images from googleapis.")
 
-        imageName = 'lakeRecognition/satelliteImages/google-map_' + lat + '_' + lon + '.jpg'
+        imageName = 'lakeRecognition/satelliteImages/google-map_' + lat + '_' + lon + '.png'
         imCropped = self.cropImage(imageName)
         os.remove(imageName)
         return imCropped
