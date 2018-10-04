@@ -74,7 +74,7 @@ configure_environment()
 	echo '# Configuring Mission Optimizer environment...'
 	echo '##############################################'
 	mkdir logs/
-	mkdir lakeRecognition/satelliteImages/
+	mkdir lakeRecognition/WaterBodiesImages/
 	mkdir export/
 }
 

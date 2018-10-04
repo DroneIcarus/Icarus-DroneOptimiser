@@ -43,28 +43,20 @@ class Map:
         self.resolution = self.distanceXY([0, 0], [0, 1])
 
     def getSatelliteImage(self, lat, lon):
-        success = True
-        for tryNb in range(3):
-            if waterImage.get_waterbody_image(lat, lon) == 0:
-                success = True
-                break
-            else:
-                print("Trying to get satellite images from googleapis...")
-                success = False
-        if not success:
-            sys.exit("Error: Cannot get satellite images from googleapis.")
-
-        imageName = 'lakeRecognition/satelliteImages/google-map_' + lat + '_' + lon + '.png'
-        imCropped = self.cropImage(imageName)
-        os.remove(imageName)
-        return imCropped
+        if not waterImage.get_waterbody_image(lat, lon):
+            sys.exit("Error: Fetching water bodies images was unsuccesful. EXITING.")
+        else:
+            imageName = 'lakeRecognition/WaterBodiesImages/google-map_' + lat + '_' + lon + '.png'
+            imCropped = self.cropImage(imageName)
+            os.remove(imageName)
+            return imCropped
 
     def satImageProcess(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
         thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
         cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
-        cv2.imwrite('satelliteImages/thresh.jpg', thresh)
+        cv2.imwrite('WaterBodiesImages/thresh.jpg', thresh)
         return thresh
 
     def findLakeContour(self, imageFiltered, originalImage, lakeList):
@@ -81,7 +73,7 @@ class Map:
         [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), self.resolution)) for i in j]
 
         cv2.drawContours(originalImage, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
-        cv2.imwrite('satelliteImages/final.jpg', originalImage)
+        cv2.imwrite('WaterBodiesImages/final.jpg', originalImage)
         # print("Lake contour detected")
         return originalImage
 
@@ -95,7 +87,7 @@ class Map:
             finalImage = np.vstack(lineAdded[:])
         else:
             finalImage = lineAdded[0]
-        cv2.imwrite('satelliteImages/imageAdded.jpg', finalImage)
+        cv2.imwrite('WaterBodiesImages/imageAdded.jpg', finalImage)
         # print("Map constructed")
         return finalImage
 

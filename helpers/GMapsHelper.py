@@ -17,6 +17,25 @@ GMAPS_STYLE_ONLY_WATER = "&style=feature:administrative|visibility:off&style=fea
 GMAPS_STATIC_API_KEY = config['gmaps_keys']['api']
 GMAPS_STATIC_SECRETS = config['gmaps_keys']['secret']
 
+MAX_REQUEST_TRIES = 5
+
+def gmaps_request(url, try_nb=MAX_REQUEST_TRIES):
+    response = urlopen(url)
+
+    if response.status == 200:
+        return response.read()
+
+    elif response.status in range(500, 599):
+        # 5xx Server Error
+        # Try up to <try_nb> times
+        if try_nb > 0:
+            gmaps_request(url, try_nb-1)
+        return None
+
+    else:
+        # For every other HTTP code... do nothing
+        return None
+
 
 def get_google_maps_image(lat, lon):
     # Creates the URL to fetch an image
@@ -34,13 +53,14 @@ def get_google_maps_image(lat, lon):
     image_path = dest_folder / image_name
 
     # Make the request and save the image
+    image = gmaps_request(url)
     response = urlopen(url)
-    if response.status == 200:
+    if image is not None:
         with open(image_path, 'wb') as f:
             f.write(response.read())
-        return 0
+        return True
     else:
-        return response.status * -1
+        return False
 
 
 if __name__ == "__main__":
