@@ -43,21 +43,13 @@ class Map:
         self.resolution = self.distanceXY([0, 0], [0, 1])
 
     def getSatelliteImage(self, lat, lon):
-        success = True
-        for tryNb in range(3):
-            if waterImage.get_waterbody_image(lat, lon) == 0:
-                success = True
-                break
-            else:
-                print("Trying to get satellite images from googleapis...")
-                success = False
-        if not success:
-            sys.exit("Error: Cannot get satellite images from googleapis.")
-
-        imageName = 'lakeRecognition/satelliteImages/google-map_' + lat + '_' + lon + '.png'
-        imCropped = self.cropImage(imageName)
-        os.remove(imageName)
-        return imCropped
+        if not waterImage.get_waterbody_image(lat, lon):
+            sys.exit("Error: Fetching water bodies images was unsuccesful. EXITING.")
+        else:
+            imageName = 'lakeRecognition/satelliteImages/google-map_' + lat + '_' + lon + '.png'
+            imCropped = self.cropImage(imageName)
+            os.remove(imageName)
+            return imCropped
 
     def satImageProcess(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
