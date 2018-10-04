@@ -3,7 +3,7 @@ import cv2
 import numpy as np
 import os
 from math import radians, cos, sin, asin, sqrt
-from lakeRecognition import getSatImage
+from lakeRecognition import waterImage
 from lakeRecognition.lakeClass import Lakes
 
 
@@ -45,7 +45,7 @@ class Map:
     def getSatelliteImage(self, lat, lon):
         success = True
         for tryNb in range(3):
-            if getSatImage.get_google_sat_image(lat, lon) == 0:
+            if waterImage.get_waterbody_image(lat, lon) == 0:
                 success = True
                 break
             else:
@@ -54,7 +54,7 @@ class Map:
         if not success:
             sys.exit("Error: Cannot get satellite images from googleapis.")
 
-        imageName = 'lakeRecognition/satelliteImages/google-map_' + lat + '_' + lon + '.jpg'
+        imageName = 'lakeRecognition/satelliteImages/google-map_' + lat + '_' + lon + '.png'
         imCropped = self.cropImage(imageName)
         os.remove(imageName)
         return imCropped
