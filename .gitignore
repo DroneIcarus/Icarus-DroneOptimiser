@@ -1,5 +1,7 @@
 .vscode/
 .idea
-*\__pycache__\*
+*/__pycache__/*
 logs/
 export/
+lakeRecognition/satelliteImages/*
+

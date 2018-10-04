@@ -10,6 +10,7 @@ opencv-python = "*"
 matplotlib = "*"
 networkx = "*"
 requests = "*"
+pipfile = "*"
 
 [dev-packages]
 

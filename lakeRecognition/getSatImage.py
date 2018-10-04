@@ -1,26 +1,46 @@
-import requests, os.path
+from pathlib import Path
+import configparser
+from urllib.request import urlopen
+from helpers.urlsigner import sign_url
 
-API_KEY = "AIzaSyDp-d2D-ksHoMtxUYMSagJgicSW5-dVGGQ"
+# Fetches variables from the config file
+config = configparser.ConfigParser()
+config.read('config.ini')
+
+STATIC_MAP_URL = "https://maps.googleapis.com/maps/api/staticmap?"
+GMAPS_PARAMS = "center={},{}&zoom={}&size={}x{}&scale={}&maptype={}"#&format=jpg-baseline"
+# Style took from https://snazzymaps.com/style/138/water-only
+GMAPS_STYLE_ONLY_WATER = "&style=feature:administrative|visibility:off&style=feature:landscape|visibility:off&style=feature:poi|visibility:off&style=feature:road|visibility:off&style=feature:transit|visibility:off&style=feature:water|element:geometry|hue:0x002bff|lightness:-78"
+
+# Please assure that you are using a key and a secret:
+# https://console.cloud.google.com/apis/api/static_maps_backend/staticmap
+GMAPS_STATIC_API_KEY = config['gmaps_keys']['api']
+GMAPS_STATIC_SECRETS = config['gmaps_keys']['secret']
 
 
-def get_google_sat_image(lat, long):
+def get_google_sat_image(lat, lon):
+    # Creates the URL to fetch an image
     lat = str(lat)
-    long = str(long)
-    src = "https://maps.googleapis.com/maps/api/staticmap?center=" + lat + "," + long + "&zoom=14&scale=1&format=jpg-baseline&size=639x639&style=element:label|geometry.stroke|visibility:off&style=feature:road|visibility:off&style=feature:administrative|visibility:off&style=feature:poi|visibility:off&style=feature:water|saturation:-100|invert_lightness:true&style=feature|element:labels|visibility:off"
-    src = src + "&key=" + API_KEY
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    dest_folder = dir_path + '/satelliteImages/'
-    image_name = 'google-map_' + lat + '_' + long + '.jpg'
-    image_path = dest_folder + image_name
+    lon = str(lon)
+    url = STATIC_MAP_URL + GMAPS_PARAMS.format(lat,lon, 14, 640,640, 1, "roadmap") + GMAPS_STYLE_ONLY_WATER + "&key=" + GMAPS_STATIC_API_KEY
 
-    response = requests.get(src)
-    if response.status_code == 200:
+    # Sign the url with private key
+    url = sign_url(url, GMAPS_STATIC_SECRETS)
+    
+    # Create a location to store returned image
+    dest_folder = Path( config['images']['lake_folder'] )
+    image_name = 'google-map_' + lat + '_' + lon + '.png'
+    image_path = dest_folder / image_name
+
+    # Make the request and save the image
+    response = urlopen(url)
+    if response.status == 200:
         with open(image_path, 'wb') as f:
-            f.write(response.content)
+            f.write(response.read())
         return 0
-
     else:
-        return -404
+        return response.status * -1
+
 
 if __name__ == "__main__":
-    get_google_sat_image(20.123,23.213)
+    get_google_sat_image(44.1644712,-74.3818805)
