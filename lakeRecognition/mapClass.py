@@ -46,7 +46,7 @@ class Map:
         if not waterImage.get_waterbody_image(lat, lon):
             sys.exit("Error: Fetching water bodies images was unsuccesful. EXITING.")
         else:
-            imageName = 'lakeRecognition/WaterBodiesImages/google-map_' + lat + '_' + lon + '.png'
+            imageName = 'lakeRecognition/WaterBodiesImages/google-map_' + lat + '_' + lon + '.jpg'
             imCropped = self.cropImage(imageName)
             os.remove(imageName)
             return imCropped
