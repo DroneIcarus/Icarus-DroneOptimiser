@@ -2,6 +2,7 @@ from pathlib import Path
 import configparser
 from urllib.request import urlopen
 from helpers.urlsigner import sign_url
+import os
 
 # Fetches variables from the config file
 config = configparser.ConfigParser()
@@ -10,7 +11,10 @@ config.read('config.ini')
 STATIC_MAP_URL = "https://maps.googleapis.com/maps/api/staticmap?"
 GMAPS_PARAMS = "center={},{}&zoom={}&size={}x{}&scale={}&maptype={}"  # &format=jpg-baseline"
 # Style took from https://snazzymaps.com/style/138/water-only
-GMAPS_STYLE_ONLY_WATER = "&style=feature:administrative|visibility:off&style=feature:landscape|visibility:off&style=feature:poi|visibility:off&style=feature:road|visibility:off&style=feature:transit|visibility:off&style=feature:water|element:geometry|hue:0x002bff|lightness:-78"
+GMAPS_STYLE_ONLY_WATER = "&format=jpg-baseline&size=639x639&style=element:label|geometry.stroke|visibility:off&style=feature:road|visibility:off&style=feature:administrative|visibility:off&style=feature:poi|visibility:off&style=feature:water|saturation:-100|invert_lightness:true&style=feature|element:labels|visibility:off"
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+#GMAPS_STYLE_ONLY_WATER = "&style=feature:administrative|visibility:off&style=feature:landscape|visibility:off&style=feature:poi|visibility:off&style=feature:road|visibility:off&style=feature:transit|visibility:off&style=feature:water|element:geometry|hue:0x002bff|lightness:-78"
 
 # Please assure that you are using a key and a secret:
 # https://console.cloud.google.com/apis/api/static_maps_backend/staticmap
@@ -49,7 +53,7 @@ def get_google_maps_image(lat, lon):
 
     # Create a location to store returned image
     dest_folder = Path(config['images']['lake_folder'])
-    image_name = 'google-map_' + lat + '_' + lon + '.png'
+    image_name = 'google-map_' + lat + '_' + lon + '.jpg'
     image_path = dest_folder / image_name
 
     # Make the request and save the image
