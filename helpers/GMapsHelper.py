@@ -1,8 +1,10 @@
-from pathlib import Path
+import os
 import configparser
+from collections import namedtuple
+from pathlib import Path
+from math import sin, cos, tan, atan, sinh, pi, log, degrees, radians
 from urllib.request import urlopen
 from helpers.urlsigner import sign_url
-import os
 
 # Fetches variables from the config file
 config = configparser.ConfigParser()
@@ -22,6 +24,18 @@ GMAPS_STATIC_API_KEY = config['gmaps_keys']['api']
 GMAPS_STATIC_SECRETS = config['gmaps_keys']['secret']
 
 MAX_REQUEST_TRIES = 5
+
+Coordinate = namedtuple('Coordinate', ['lat', 'lon'])
+TileCoordinate = namedtuple('TileCoordinate', ['xtile', 'ytile'])
+
+# TODO: Change every lat lon to Coordinate!!
+
+def latlon_to_coordinate(lat, lon):
+    return Coordinate(lat, lon)
+
+def xytile_to_tilecoordinate(xtile, ytile):
+    return TileCoordinate(xtile, ytile)
+
 
 def gmaps_request(url, try_nb=MAX_REQUEST_TRIES):
     response = urlopen(url)
@@ -58,14 +72,43 @@ def get_google_maps_image(lat, lon):
 
     # Make the request and save the image
     image = gmaps_request(url)
-    response = urlopen(url)
-    if image is not None:
-        with open(image_path, 'wb') as f:
-            f.write(response.read())
-        return True
-    else:
-        return False
+    return image
+
+
+def mercator_projection(coord, tile_size):
+    siny = sin(coord.lat * pi / 180)
+
+    # Truncating to 0.9999 effectively limits latitude to 89.189.This is
+    # about a third of a tile past the edge of the world tile.
+    # https://developers.google.com/maps/documentation/javascript/examples/map-coordinates
+    siny = min(max(siny, -0.9999), 0.9999)
+
+    return Coordinate(tile_size.x * (0.5 + coord.lon/360),
+                      tile_size.y * (0.5 - log((1 + siny) / (1 - siny)) / (4 * pi)))
+
+
+def latlon_to_tile(coord, zoom):
+    n = 2 ** zoom
+    lat_rad = radians(coord.lat)
+    xtile = int((0.5 + coord.lon/360) * n)
+    ytile = int((1 - log(tan(lat_rad) + (1/cos(lat_rad))) / pi) / 2 * n)
+    return TileCoordinate(xtile, ytile)
+
+
+def tile_to_latlon(tilecoord, zoom):
+    n = 2.0 ** zoom
+    lon_deg = tilecoord.xtile / n * 360.0 - 180.0
+    lat_rad = atan(sinh(pi * (1 - 2 * tilecoord.ytile / n)))
+    lat_deg = degrees(lat_rad)
+    return Coordinate(lat_deg, lon_deg)
 
 
 if __name__ == "__main__":
-    get_google_maps_image(44.1644712,-74.3818805)
+    # get_google_maps_image(44.1644712,-74.3818805)
+    a = Coordinate(41.850, -87.650)
+    b = latlon_to_tile(a, 20)
+
+    c = tile_to_latlon(b, 20)
+
+    print(c)
+
