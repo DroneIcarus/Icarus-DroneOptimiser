@@ -43,20 +43,19 @@ class Map:
         self.resolution = self.distanceXY([0, 0], [0, 1])
 
     def getSatelliteImage(self, lat, lon):
-        if not waterImage.get_waterbody_image(lat, lon):
-            sys.exit("Error: Fetching water bodies images was unsuccesful. EXITING.")
-        else:
-            imageName = 'lakeRecognition/WaterBodiesImages/google-map_' + lat + '_' + lon + '.jpg'
-            imCropped = self.cropImage(imageName)
-            os.remove(imageName)
+        image = waterImage.get_waterbody(lat, lon)
+        if image is not None:
+            imCropped = self.cropImage(image)
             return imCropped
+        else:
+            sys.exit("Error: Fetching water bodies images was unsuccesful. EXITING.")
 
     def satImageProcess(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
         thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
         cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
-        cv2.imwrite('WaterBodiesImages/thresh.jpg', thresh)
+        cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
         return thresh
 
     def findLakeContour(self, imageFiltered, originalImage, lakeList):
@@ -73,7 +72,7 @@ class Map:
         [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), self.resolution)) for i in j]
 
         cv2.drawContours(originalImage, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
-        cv2.imwrite('WaterBodiesImages/final.jpg', originalImage)
+        cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', originalImage)
         # print("Lake contour detected")
         return originalImage
 
@@ -87,13 +86,15 @@ class Map:
             finalImage = np.vstack(lineAdded[:])
         else:
             finalImage = lineAdded[0]
-        cv2.imwrite('WaterBodiesImages/imageAdded.jpg', finalImage)
+        cv2.imwrite('lakeRecognition/WaterBodiesImages/imageAdded.jpg', finalImage)
         # print("Map constructed")
         return finalImage
 
-    def cropImage(self, imageName):
-        image = cv2.imread(imageName)
-        image = image[19:620, 19:620]
+    def cropImage(self, image):
+        image = np.asarray(bytearray(image), dtype="uint8")
+        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
+        #return image
+        image = image[0:-19, 0:-19]
         return image
 
     def xy2LatLon(self, point):

@@ -13,7 +13,7 @@ config.read('config.ini')
 STATIC_MAP_URL = "https://maps.googleapis.com/maps/api/staticmap?"
 GMAPS_PARAMS = "center={},{}&zoom={}&size={}x{}&scale={}&maptype={}"  # &format=jpg-baseline"
 # Style took from https://snazzymaps.com/style/138/water-only
-GMAPS_STYLE_ONLY_WATER = "&format=jpg-baseline&size=639x639&style=element:label|geometry.stroke|visibility:off&style=feature:road|visibility:off&style=feature:administrative|visibility:off&style=feature:poi|visibility:off&style=feature:water|saturation:-100|invert_lightness:true&style=feature|element:labels|visibility:off"
+GMAPS_STYLE_ONLY_WATER = "&format=jpg-baseline&style=element:label|geometry.stroke|visibility:off&style=feature:road|visibility:off&style=feature:administrative|visibility:off&style=feature:poi|visibility:off&style=feature:water|saturation:-100|invert_lightness:true&style=feature|element:labels|visibility:off"
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 #GMAPS_STYLE_ONLY_WATER = "&style=feature:administrative|visibility:off&style=feature:landscape|visibility:off&style=feature:poi|visibility:off&style=feature:road|visibility:off&style=feature:transit|visibility:off&style=feature:water|element:geometry|hue:0x002bff|lightness:-78"
@@ -23,18 +23,26 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 GMAPS_STATIC_API_KEY = config['gmaps_keys']['api']
 GMAPS_STATIC_SECRETS = config['gmaps_keys']['secret']
 
-MAX_REQUEST_TRIES = 5
-
-Coordinate = namedtuple('Coordinate', ['lat', 'lon'])
+Coordinate = namedtuple('Coordinate', ['lat', 'lon'],)
 TileCoordinate = namedtuple('TileCoordinate', ['xtile', 'ytile'])
 
+MAX_REQUEST_TRIES = 5
+TILE_SIZE = TileCoordinate(512, 512)
+
 # TODO: Change every lat lon to Coordinate!!
+# TODO: Remove Google copyright at the bottom of map images
+
 
 def latlon_to_coordinate(lat, lon):
     return Coordinate(lat, lon)
 
+
 def xytile_to_tilecoordinate(xtile, ytile):
     return TileCoordinate(xtile, ytile)
+
+
+def get_tile_size():
+    return TILE_SIZE
 
 
 def gmaps_request(url, try_nb=MAX_REQUEST_TRIES):
@@ -59,16 +67,12 @@ def get_google_maps_image(lat, lon):
     # Creates the URL to fetch an image
     lat = str(lat)
     lon = str(lon)
-    url = STATIC_MAP_URL + GMAPS_PARAMS.format(lat, lon, 14, 640, 640, 1,
+    url = STATIC_MAP_URL + GMAPS_PARAMS.format(lat, lon, 14, 256, 256, 1,
                                                "roadmap") + GMAPS_STYLE_ONLY_WATER + "&key=" + GMAPS_STATIC_API_KEY
 
     # Sign the url with private key
     url = sign_url(url, GMAPS_STATIC_SECRETS)
-
-    # Create a location to store returned image
-    dest_folder = Path(config['images']['lake_folder'])
-    image_name = 'google-map_' + lat + '_' + lon + '.jpg'
-    image_path = dest_folder / image_name
+    print(url)
 
     # Make the request and save the image
     image = gmaps_request(url)
@@ -83,8 +87,8 @@ def mercator_projection(coord, tile_size):
     # https://developers.google.com/maps/documentation/javascript/examples/map-coordinates
     siny = min(max(siny, -0.9999), 0.9999)
 
-    return Coordinate(tile_size.x * (0.5 + coord.lon/360),
-                      tile_size.y * (0.5 - log((1 + siny) / (1 - siny)) / (4 * pi)))
+    return Coordinate(tile_size.xtile * (0.5 + coord.lon/360),
+                      tile_size.ytile * (0.5 - log((1 + siny) / (1 - siny)) / (4 * pi)))
 
 
 def latlon_to_tile(coord, zoom):
@@ -104,11 +108,37 @@ def tile_to_latlon(tilecoord, zoom):
 
 
 if __name__ == "__main__":
+    #NOTE: Google operates Maps using tile of 256x256 pixels
+    import cv2
+    import numpy as np
     # get_google_maps_image(44.1644712,-74.3818805)
-    a = Coordinate(41.850, -87.650)
-    b = latlon_to_tile(a, 20)
 
-    c = tile_to_latlon(b, 20)
+    # Our implementation
+    a = Coordinate(44.1644712, -74.3818805)
+    print(latlon_to_tile(a,14))
 
-    print(c)
+    # Using mercator function
+    lat,lon = mercator_projection(a, TILE_SIZE)
+    lat = lat * (2 ** 14)/ TILE_SIZE.xtile
+    lon = lon * (2 ** 14)/ TILE_SIZE.ytile
+    print("{} , {}".format(lat, lon))
+
+    b = tile_to_latlon(TileCoordinate(4806,5947), 14)
+    b1 = tile_to_latlon(TileCoordinate(4807,5947), 14)
+    b2 = tile_to_latlon(TileCoordinate(4808,5947), 14)
+
+    c = get_google_maps_image(b.lat, b.lon)
+    c1 = get_google_maps_image(b1.lat, b1.lon)
+    c2 = get_google_maps_image(b2.lat, b2.lon)
+
+    d = np.asarray(bytearray(c), dtype="uint8")
+    d = cv2.imdecode(d, cv2.IMREAD_COLOR)
+    d1 = np.asarray(bytearray(c1), dtype="uint8")
+    d1 = cv2.imdecode(d1, cv2.IMREAD_COLOR)
+    d2 = np.asarray(bytearray(c2), dtype="uint8")
+    d2 = cv2.imdecode(d2, cv2.IMREAD_COLOR)
+
+    cv2.imwrite('/tmp/test.jpg', d)
+    cv2.imwrite('/tmp/test1.jpg', d1)
+    cv2.imwrite('/tmp/test2.jpg', d2)
 
