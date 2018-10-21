@@ -2,28 +2,33 @@ import configparser
 import pymongo
 import helpers.GMapsHelper as maphelper
 
-GMAPS_ZOOM = 14
+################### Constants ###################
+GMAPS_ZOOM = maphelper.get_zoom()
 MAX_TILE_SIZE = maphelper.get_tile_size()
 
+################### Config File ###################
 config = configparser.ConfigParser()
 config.read('config.ini')
 
+################### Database ###################
 __DB_path = "mongodb://" + config['database']['url'] + ":" + config['database']['port']
 __dbclient = pymongo.MongoClient(__DB_path)
 __db = __dbclient[config['database']['name']]
 __db_waterbodies = __db["waterbodies_landingpoints"]
 
 
-# As of right, it is only fetching the latlong corresponding tile
+# As of right now, it is only fetching the latlong corresponding tile
 def get_waterbody(lat, lon, zoom=GMAPS_ZOOM):
     tilecoord = maphelper.latlon_to_tile(maphelper.latlon_to_coordinate(float(lat), float(lon)), zoom)
     item = search_waterbody_db(tilecoord)
     if item is not None:
-        print("oui")
+        # The item is already in the DB
+        print("In the DB")
         return item['image']
     else:
+        # The item needs to be inserted in the DB
         coordtile = maphelper.tile_to_latlon(tilecoord, zoom)
-        image = maphelper.get_google_maps_image(coordtile.lat, coordtile.lon)
+        image = maphelper.get_google_maps_image(coordtile)
 
         # Make the transformation from image to landing points
 
@@ -32,26 +37,17 @@ def get_waterbody(lat, lon, zoom=GMAPS_ZOOM):
             print("There was an error while inserting tile to DB. EXITING")
             exit(-1)
         else:
-            print("Ouioui")
+            print("Inserted in the DB")
             return item
 
 
-def tile_no_by_tile_coord(tile_coord, max_tile_size=MAX_TILE_SIZE):
-    return tile_coord.xtile + tile_coord.ytile * max_tile_size.xtile
-
-
-def tile_coord_by_tile_no(tile_no, max_tile_size=MAX_TILE_SIZE):
-    ytile, xtile = divmod(tile_no, max_tile_size.xtile)
-    return maphelper.xytile_to_tilecoordinate(xtile, ytile)
-
-
 def search_waterbody_db(tile_coord):
-    tile_no = tile_no_by_tile_coord(tile_coord)
+    tile_no = maphelper.tile_no_by_tile_coord(tile_coord)
     return __db_waterbodies.find_one({"tile_no": tile_no})
 
 
 def insert_waterbody_db(tile_coord, image):
-    tile_no = tile_no_by_tile_coord(tile_coord)
+    tile_no = maphelper.tile_no_by_tile_coord(tile_coord)
     item = __db_waterbodies.insert_one({"tile_no": tile_no, "image": image})
     if item is not None:
         return True
@@ -62,6 +58,22 @@ def insert_waterbody_db(tile_coord, image):
 # Eg.: For a zoom of 14; 16384 * 16384 = 268435456 tiles
 if __name__ == "__main__":
     print("Main of waterImage.py")
+
+    file = open('/tmp/im.jpg', 'wb')
+    file1 = open('/tmp/im1.jpg', 'wb')
+    file2 = open('/tmp/im2.jpg', 'wb')
+
+    im = get_waterbody(44.166444664458595, -74.3994140625)
+    im1 = get_waterbody(44.166444664458595, -74.37744140625)
+    im2 = get_waterbody(44.166444664458595, -74.35546875)
+
+    file.write(im)
+    file1.write(im1)
+    file2.write(im2)
+    file.close()
+    file1.close()
+    file2.close()
+
     #coord = maphelper.latlon_to_coordinate(44.1644712, -74.3818805)
 
     #print(get_waterbody(coord, 14))
