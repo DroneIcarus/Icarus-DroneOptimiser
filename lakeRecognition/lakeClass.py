@@ -4,9 +4,10 @@ import numpy as np
 from math import radians, degrees, cos, sin, sqrt
 from helpers.GPSHelper import bearingQuadrantAngle, calcBearing, calcGPSDestination, distBetweenCoord
 from operator import itemgetter
+import logging
 
 debugMode = False
-
+logger = logging.getLogger(__name__)
 
 def debug(str):
     if debugMode:
@@ -204,7 +205,7 @@ class Lakes:
         lastJ = 0
         lastI = 0
         idetected = False
-
+        logger.debug('findLandingPoint..')
         for i in range(0, imax, 5):
             jdetected = False
 
@@ -254,12 +255,12 @@ class Lakes:
                                 cv2.fillConvexPoly(self.contourImage, point, (122,122,122))
                                 # cv2.imwrite("WaterBodiesImages/" + "vector.jpg", tempImage3)
 
-
-
+        logger.debug('findLandingPoint almost done')
         for lp in self.landingPoint:
             self.contourImage[lp[0], lp[1]] = 255
 
         cv2.imwrite("WaterBodiesImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
+        logger.debug('findLandingPoint done')
         # print(len(self.landingPoint))
         # print("There is %d landing point" % (len(self.gpsLandingPoint)))
         return self.landingList

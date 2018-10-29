@@ -9,6 +9,26 @@ from lakeRecognition.lakeClass import LandingPoint
 
 logger = logging.getLogger(__name__)
 
+class MissionComplexItem:
+    def __init__(self, item):
+        self.transectStyleComplexItem = item["TransectStyleComplexItem"]
+        #self.TransectStyleComplexItem.CameraCalc = self.transectStyleComplexItem['CameraCalc']
+        #self.TransectStyleComplexItem.CameraTriggerInTurnAround = self.transectStyleComplexItem["CameraTriggerInTurnAround"]
+        #self.TransectStyleComplexItem.FollowTerrain = self.transectStyleComplexItem["FollowTerrain"]
+        #self.TransectStyleComplexItem.HoverAndCapture = self.transectStyleComplexItem["HoverAndCapture"]
+        #self.TransectStyleComplexItem.FollowTerrain = self.transectStyleComplexItem["FollowTerrain"]
+        #self.TransectStyleComplexItem.Items = self.transectStyleComplexItem["Items"]
+        #self.TransectStyleComplexItem.Refly90Degrees = self.transectStyleComplexItem["Refly90Degrees"]
+        #self.TransectStyleComplexItem.TurnAroundDistance = self.transectStyleComplexItem["TurnAroundDistance"]
+        #self.TransectStyleComplexItem.VisualTransectPoints = self.transectStyleComplexItem["VisualTransectPoints"]
+        #print(self.transectStyleComplexItem['CameraCalc'])
+        self.angle = item["angle"]
+        self.complexItemType = item["complexItemType"]
+        self.entryLocation = item["entryLocation"]
+        self.flyAlternateTransects = item["flyAlternateTransects"]
+        self.polygon = item["polygon"]
+        self.type = item["type"]
+        self.version = item["version"]
 
 # Only deals with SimpleItem as of Feb 22nd 2018
 class MissionItem:
@@ -189,7 +209,18 @@ class Mission:
         self.hoverSpeed = hoverspeed
 
     def get_missionitems(self):
-        return self.missionItems
+        missionItemList = []
+        for mItem in self.missionItems:
+            if(mItem.type == "SimpleItem") :
+                if(mItem.command == 16 or mItem.command == 21 or mItem.command == 22) :
+                    missionItemList.append(mItem)
+            elif(mItem.type == "ComplexItem") :
+                for mComplexItem in mItem.transectStyleComplexItem["Items"] :
+                    mComplexItemObj = MissionItem(mComplexItem)
+                    if (mComplexItemObj.command == 16 or mComplexItemObj.command == 21 or mComplexItemObj.command == 22):
+                        missionItemList.append(mComplexItemObj)
+        print(len(missionItemList))
+        return missionItemList
 
     def set_missionitems(self, missionitems):
         self.missionItems = self.__fetch_items(missionitems)
@@ -222,16 +253,24 @@ class Mission:
         # (Phil) Je crois qu'on devrait prend d'autres commandes que seulement 16
         #        et même jeter des execeptions quand c'est un type qui n'est pas pris en compte.
         for idx in range(len(self.missionItems)):
-            if (self.missionItems[idx].get_command() == 16
-                    or self.missionItems[idx].get_command() == 21
-                    or self.missionItems[idx].get_command() == 22):
-                waypoints.append(self.missionItems[idx].get_coordinate())
-            elif (self.missionItems[idx].get_command() == 17):
-                logger.error("The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
-                sys.exit("ERROR: The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
-            else:
-                logger.error("The mission point %d isn't a valid type."%(idx+1))
-                sys.exit("ERROR: The mission point %d isn't a valid type."%(idx+1))
+            if(self.missionItems[idx].type == "SimpleItem") :
+                if (self.missionItems[idx].get_command() == 16
+                        or self.missionItems[idx].get_command() == 21
+                        or self.missionItems[idx].get_command() == 22):
+                    waypoints.append(self.missionItems[idx].get_coordinate())
+                elif (self.missionItems[idx].get_command() == 17):
+                    logger.error("The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
+                    sys.exit("ERROR: The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
+                elif (self.missionItems[idx].get_command() == 530):
+                    #ToDo : Check what's 530 and add it
+                    pass
+                else:
+                    logger.error("The mission point %d isn't a valid type."%(idx+1))
+                    sys.exit("ERROR: The mission point %d isn't a valid type."%(idx+1))
+            elif (self.missionItems[idx].type == "ComplexItem") :
+                for idx2 in range(len(self.missionItems[idx].transectStyleComplexItem['VisualTransectPoints'])):
+                    waypoints.append(self.missionItems[idx].transectStyleComplexItem['VisualTransectPoints'][idx2])
+
         return waypoints
 
     @staticmethod
@@ -239,7 +278,10 @@ class Mission:
         items_arr = []
 
         for idx in range(len(items)):
-            items_arr.append(MissionItem(items[idx]))
+            if (items[idx]["type"] == "SimpleItem") :
+                items_arr.append(MissionItem(items[idx]))
+            elif (items[idx]["type"] == "ComplexItem") :
+                items_arr.append(MissionComplexItem(items[idx]))
 
         return items_arr
 

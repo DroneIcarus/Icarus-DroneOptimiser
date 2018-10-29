@@ -95,26 +95,33 @@ class MissionPlanner(object):
         # TODO: Should become a cost matrix when we will find a way to evaluate a cost
         distanceMatrix = numpy.zeros((self.nbMissionPoint, self.nbMissionPoint))
         i = 0
+        print('__getDistanceMatrix')
         for mItem in self.initialMissionItemList:
             j = 0
             for mItem2 in self.initialMissionItemList:
                 distanceMatrix[i][j] = self.getTimeToFly(mItem, mItem2)
                 j+=1
             i+=1
+
         #Assign a very low cost between the first and last node to be sure that there are aside because we want to have a start and a end
         distanceMatrix[0][self.nbMissionPoint-1] = 0.000001
         distanceMatrix[self.nbMissionPoint-1][0] = 0.000001
         # logger.debug(distanceMatrix)
+        print('__getDistanceMatrix done!')
         return distanceMatrix
 
     def getMissionPointOrder(self):
         # TODO: Maybe... create a fonction for this
         # TODO: Find a way to attribute a very low or null cost between the start node and the end node
+        print('Create graph')
         G = CreateGraph(matrix = self.distanceMatrix)
+        print('Create graph done')
         pos = DrawGraph(G,'black')
+        print('draw graph done')
         opGraph, nodeOrder = christofedes(G, pos)
 
         #Need to correct the order if not true
+        print('check order')
         if nodeOrder[0] != 0 or nodeOrder[-1] !=  self.nbMissionPoint-1:
             #Need to inverse the order if true
             if nodeOrder[0] == 0 and nodeOrder[1] == self.nbMissionPoint-1:
@@ -131,6 +138,7 @@ class MissionPlanner(object):
             logger.warning("The node order is not good...")
             sys.exit("ERROR: MissionPlanner::getMissionPointOrder, the node order is incorrect.")
 
+        print('check order done')
         # logger.debug("Order of node: ", nodeOrder)
         return nodeOrder
 
@@ -150,7 +158,9 @@ class MissionPlanner(object):
     #Exemple si l'ordre des points de mission est A, C B - La liste retournee sera [(A,C),(C,B)]
     def __getPairedMissionPoints(self):
         result = []
+        print('__getPairedMissionPoints')
         nodeOrder  = self.getMissionPointOrder()
+        print('getMissionPointOrder done')
         i = 0
         for index in nodeOrder:
             if i < len(nodeOrder) - 1:
@@ -193,18 +203,21 @@ class MissionPlanner(object):
         map1 = Map(str(minLat),str(minLong), str(maxLat), str(maxLong))
         imageProcessed = map1.satImageProcess(map1.imageAdded)
         imageWithContour = map1.findLakeContour(imageProcessed,map1.imageAdded,lakeList)
-
+        print('findLakeContour Done! lake list : ' + str(len(lakeList)))
         [lake.cropContour(imageProcessed,map1) for lake in lakeList]
-
+        logger.debug('lake.cropContour done')
         [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in lakeList]
-
+        logger.debug('getLongWeather Done!')
         self.__sortLakeList(lakeList)
-
+        logger.debug('__sortLakeList Done!')
         self.__exportLakesCenter(lakeList)
+        logger.debug('__exportLakesCenter Done!')
         self.__exportLakesContour(lakeList)
+        logger.debug('__exportLakesContour Done!')
         self.__exportLakesSortPoint(lakeList)
+        logger.debug('__exportLakesSortPoint Done!')
         self.__exportLakesLandingPoint(lakeList)
-
+        logger.debug('__exportLakesLandingPoint Done!')
         return lakeList
 
     #Retourne une liste de lacs avec leurs landing points se trouvant entre les 2 points GPS
@@ -457,15 +470,16 @@ class MissionPlanner(object):
         self.__addMissionItem(end)
 
     def run(self):
+        logger.debug('run')
         #Plan a mission between each pairedPoint
         pairedMissionPoint = self.__getPairedMissionPoints()
-
+        logger.debug('__getPairedMissionPoints Done!')
         #Add the starting missionPoint
         self.__addMissionItem(pairedMissionPoint[0][0])
-
+        logger.debug('__addMissionItem Done!')
         #Get all the landing point
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
-
+        logger.debug('__getTotalLakeList Done!')
         for pairedPoint in pairedMissionPoint:
             i=0
             distanceBetweenPoints = pairedPoint[0].distanceTo(pairedPoint[1])
