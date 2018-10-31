@@ -516,7 +516,7 @@ class MissionPlanner(object):
                 pairedPoint[1].setID('end')
                 self.__addMissionItem(pairedPoint[1])
 
-            self.missionPlan.mission.set_missionitems2(self.finalMissionItemList)
+            #self.missionPlan.mission.set_missionitems2(self.finalMissionItemList)
             self.__missionIndex = self.__missionIndex + 1
 
             #Use to debug when the mission is not completly done
@@ -525,6 +525,7 @@ class MissionPlanner(object):
                 writer = csv.writer(f)
                 writer.writerows(self.resultingWay)
 
+        self.missionPlan.mission.set_missionitems2(self.finalMissionItemList)
         with open(self.exportPath + 'completeMission.csv', 'w') as f:
             writer = csv.writer(f)
             writer.writerows(self.resultingWay)

@@ -189,6 +189,7 @@ class Mission:
         self.plannedHomePosition = mission["plannedHomePosition"]
         self.vehicleType = mission["vehicleType"]
         self.version = mission["version"]
+        self.surveyItems = []
 
     def get_cruisespeed(self):
         return self.cruiseSpeed
@@ -210,6 +211,7 @@ class Mission:
 
     def get_missionitems(self):
         missionItemList = []
+        print("missionItemsList : " + str(len(self.missionItems)))
         for mItem in self.missionItems:
             if(mItem.type == "SimpleItem") :
                 if(mItem.command == 16 or mItem.command == 21 or mItem.command == 22) :
@@ -219,14 +221,42 @@ class Mission:
                     mComplexItemObj = MissionItem(mComplexItem)
                     if (mComplexItemObj.command == 16 or mComplexItemObj.command == 21 or mComplexItemObj.command == 22):
                         missionItemList.append(mComplexItemObj)
-        print(len(missionItemList))
         return missionItemList
+
+    def get_brut_missionitems(self):
+        return self.missionItems
 
     def set_missionitems(self, missionitems):
         self.missionItems = self.__fetch_items(missionitems)
 
-    def set_missionitems2(self,missionitems):
-        self.missionItems = missionitems
+    def set_missionitems2(self, _missionitems):
+        # reconstruction des survey ..
+        newMissionItems = []
+        print("new items : " + str(len(_missionitems)))
+        arrayOfSurvey = []
+        surveyIndex = 0
+        for item in self.missionItems :
+            if (item.type == "ComplexItem" and hasattr(item, 'transectStyleComplexItem')) :
+                self.surveyItems.append(item)
+                print("RECONSTRUCTION OF SURVEYS !!")
+                print("items in complex items :" + str(len(item.transectStyleComplexItem["Items"])))
+                for newItem in _missionitems:
+                    found = False
+                    for mComplexItem in item.transectStyleComplexItem["Items"]:
+                        if(newItem.get_coordinate() == [mComplexItem["params"][4], mComplexItem["params"][5]]):
+                            arrayOfSurvey.append(newItem)
+                            found = True
+                            print("new item in survey")
+                    if(len(arrayOfSurvey) != 0 and not found) :
+                        print("create new survey :)")
+                        newMissionItems.append(build_survey_mission_item(arrayOfSurvey, surveyIndex))
+                        newMissionItems.append(newItem)
+                        arrayOfSurvey.clear()
+                        surveyIndex += 1
+                    elif (len(arrayOfSurvey) == 0 and not found):
+                        newMissionItems.append(newItem)
+
+        self.missionItems = newMissionItems
 
     def get_plannedhomeposition(self):
         return self.plannedHomePosition
@@ -362,24 +392,30 @@ class MissionPlan:
     def to_json(self):
         items = []
 
-        for idx, item_obj in enumerate(self.mission.get_missionitems()):
-            item = {
-                "autoContinue": item_obj.get_autocontinue(),
-                "command": item_obj.get_command(),
-                "doJumpId": idx + 1,
-                "frame": item_obj.get_frame(),
-                "params": [
-                    item_obj.get_param1(),
-                    item_obj.get_param2(),
-                    item_obj.get_param3(),
-                    item_obj.get_param4(),
-                    item_obj.get_x(),
-                    item_obj.get_y(),
-                    item_obj.get_z()
-                ],
-                "type": item_obj.get_type()
-            }
-            items.insert(len(items), item)
+        for idx, item_obj in enumerate(self.mission.get_brut_missionitems()):
+            print(idx)
+            print(item_obj)
+            if (item_obj.type == "SimpleItem"):
+                item = {
+                    "autoContinue": item_obj.get_autocontinue(),
+                    "command": item_obj.get_command(),
+                    "doJumpId": idx + 1,
+                    "frame": item_obj.get_frame(),
+                    "params": [
+                        item_obj.get_param1(),
+                        item_obj.get_param2(),
+                        item_obj.get_param3(),
+                        item_obj.get_param4(),
+                        item_obj.get_x(),
+                        item_obj.get_y(),
+                        item_obj.get_z()
+                    ],
+                    "type": item_obj.get_type()
+                }
+                items.append(item)
+            elif(item_obj.type == "ComplexItem") :
+                # change jumpIds ..
+                items.append(item)
 
         return {
             "fileType": self.missionSettings.get_filetype(),
@@ -434,4 +470,56 @@ def build_simple_mission_item(lat, lon, item_id):
                 None
             ],
             "type": "SimpleItem"
+        }
+
+def build_camera_trigger_item() :
+    return {
+        "autoContinue": True,
+        "command": 206,
+        "doJumpId": 4,
+        "frame": 2,
+        "params": [
+            25,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0
+        ],
+        "type": "SimpleItem"
+    }
+
+def build_survey_mission_item(arrayOfSimpleItems, index) :
+    coords = []
+    if(len(arrayOfSimpleItems) == 0) :
+        items = []
+    else :
+        items = [
+            arrayOfSimpleItems[0],
+            build_camera_trigger_item()
+        ]
+        for idx, val in enumerate(arrayOfSimpleItems):
+            if(idx != 0) :
+                items.append(val)
+                coords.append(val.get_coordinate())
+
+    return {
+            "transectStyleComplexItem": {
+                "CameraCalc" : None,
+                "CameraTriggerInTurnAround" : None,
+                "FollowTerrain" : None,
+                "HoverAndCapture" : None,
+                "Items" : items,
+                "Refly90Degrees" : None,
+                "TurnAroundDistance" : None,
+                "VisualTransectPoints" : coords,
+            },
+            "angle": None,
+            "complexItemType": None,
+            "entryLocation": None,
+            "flyAlternateTransects": None,
+            "polygon": None,
+            "type": "ComplexItem",
+            "version": None
         }
