@@ -41,11 +41,13 @@ def get_waterbody(lat, lon, zoom=GMAPS_ZOOM):
             return item
 
 
+# Look if the tile (x,y) is in its database. Return the tile or None
 def search_waterbody_db(tile_coord):
     tile_no = maphelper.tile_no_by_tile_coord(tile_coord)
     return __db_waterbodies.find_one({"tile_no": tile_no})
 
 
+# Insert the tile in its database
 def insert_waterbody_db(tile_coord, image):
     tile_no = maphelper.tile_no_by_tile_coord(tile_coord)
     item = __db_waterbodies.insert_one({"tile_no": tile_no, "image": image})

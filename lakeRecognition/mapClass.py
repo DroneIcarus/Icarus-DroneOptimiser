@@ -18,6 +18,7 @@ class Map:
 
         self.latitudeDir = 'up' if float(startLatitude) < float(endLatitude) else 'down'
         self.latitudeIt = np.ceil(np.absolute(float(startLatitude) - float(endLatitude)) / self.latNext) // 2 * 2 + 1
+
         if (self.latitudeDir == 'down'):
             self.latitude = [float(startLatitude) - i * self.latNext for i in range(0, self.latitudeIt.astype(int))]
         elif (self.latitudeDir == 'up'):
@@ -48,7 +49,7 @@ class Map:
             imCropped = self.cropImage(image)
             return imCropped
         else:
-            sys.exit("Error: Fetching water bodies images was unsuccesful. EXITING.")
+            sys.exit("Error: Fetching water image was unsuccessful. EXITING.")
 
     def satImageProcess(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -57,6 +58,7 @@ class Map:
         cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
         cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
         return thresh
+
 
     def findLakeContour(self, imageFiltered, originalImage, lakeList):
         _, contour, hierarchy = cv2.findContours(imageFiltered, cv2.RETR_TREE,
