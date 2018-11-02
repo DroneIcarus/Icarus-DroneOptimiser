@@ -1,4 +1,6 @@
 import configparser
+import cv2
+import numpy as np
 from collections import namedtuple
 from math import sin, cos, tan, atan, sinh, pi, e, log, degrees, radians
 from urllib.request import urlopen
@@ -48,9 +50,13 @@ def get_google_maps_image(coord, remove_copyright=True):
     image = gmaps_request(base_url)
 
     if remove_copyright:
-        #missing_portion_coord
-        missing_portion_url = gmaps_url_former(missing_porting_coord)
-        return image
+        # Eating 24 pixels on the bottom. For smaller images it can be either 14, 18 or 20... further analysis needed.
+        pixelcoord = latlon_to_pixelcoord(coord)
+        offset_coord = pixelcoord_to_latlon(ImagePixel(pixelcoord.x, pixelcoord.y + 24))
+
+        offset_url = gmaps_url_former(offset_coord)
+        offset_image = gmaps_request(offset_url)
+        return remove_gmaps_copyright(image, offset_image)
     else:
         return image
 
@@ -63,16 +69,20 @@ def gmaps_url_former(coord):
     url = STATIC_MAP_URL + GMAPS_PARAMS.format(lat, lon, GMAPS_ZOOM, GMAPS_IMAGE_SIZE.x, GMAPS_IMAGE_SIZE.y, 1,
                                                "roadmap") + GMAPS_STYLE_ONLY_WATER + "&key=" + GMAPS_STATIC_API_KEY
 
-    # Sign the url with private key
+    # Signs the url with private key
     url = sign_url(url, GMAPS_STATIC_SECRETS)
     return url
 
 
-# TODO: to continue
-def remove_gmaps_copyright():
-    # Eating 24 pixels on the bottom. For smaller images it can be either 14, 18 or 20... further analysis needed.
+# Replace Google Maps copyright with associated image part
+def remove_gmaps_copyright(image, offset_image):
+    # Conversion to numpy/opencv arrays
+    image = cv2.imdecode(np.asarray(bytearray(image), dtype="uint8"), cv2.IMREAD_COLOR)
+    offset_image = cv2.imdecode(np.asarray(bytearray(offset_image), dtype="uint8"), cv2.IMREAD_COLOR)
 
-    return None
+    # We are removing the copyright part and replace it with its associated part
+    adjusted_im = np.concatenate((image[0:-24, 0:], offset_image[-48:-24, 0:]), axis=0)
+    return adjusted_im
 
 
 # Make the actual request to Google Map Static API
@@ -152,7 +162,7 @@ def latlon_to_tile(coord, zoom=GMAPS_ZOOM):
 # Return the pixel coordinate associated with the provided coordinate (lat,lon)
 def latlon_to_pixelcoord(coord, zoom=GMAPS_ZOOM):
     world_coord = mercator_projection(coord)
-    return MapCoordinate(round(world_coord.x*(2**zoom)), round(world_coord.y*(2**zoom)))
+    return ImagePixel(round(world_coord.x*(2**zoom)), round(world_coord.y*(2**zoom)))
 
 
 ###################################################################
@@ -210,29 +220,15 @@ if __name__ == "__main__":
 
     c = Coordinate(44.1644712, -74.3818805)
     b = latlon_to_tile(c, GMAPS_ZOOM)
-    b1 = b._replace(xtile=b.xtile + 1)
-    b2 = b._replace(xtile=b.xtile + 2)
-
+    b = b._replace(xtile=b.xtile + 1)
     b = tile_to_latlon(b, GMAPS_ZOOM)
-    b1 = tile_to_latlon(b1, GMAPS_ZOOM)
-    b2 = tile_to_latlon(b2, GMAPS_ZOOM)
 
     print("{} , {}".format(b.lat, b.lon))
-    print("{} , {}".format(b1.lat, b1.lon))
-    print("{} , {}".format(b2.lat, b2.lon))
 
-    c = get_google_maps_image(b, False)
-    c1 = get_google_maps_image(b1, False)
-    c2 = get_google_maps_image(b2, False)
+    c = get_google_maps_image(b, True)
 
-    d = np.asarray(bytearray(c), dtype="uint8")
-    d = cv2.imdecode(d, cv2.IMREAD_COLOR)
-    d1 = np.asarray(bytearray(c1), dtype="uint8")
-    d1 = cv2.imdecode(d1, cv2.IMREAD_COLOR)
-    d2 = np.asarray(bytearray(c2), dtype="uint8")
-    d2 = cv2.imdecode(d2, cv2.IMREAD_COLOR)
+    # d = np.asarray(bytearray(c), dtype="uint8")
+    # d = cv2.imdecode(d, cv2.IMREAD_COLOR)
 
-    cv2.imwrite('/tmp/test1000.jpg', d)
-    cv2.imwrite('/tmp/test1001.jpg', d1)
-    cv2.imwrite('/tmp/test1002.jpg', d2)
+    cv2.imwrite('/tmp/test1000.jpg', c)
 
