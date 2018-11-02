@@ -208,6 +208,9 @@ def pixelcoord_to_latlon(pixelcoord, zoom=GMAPS_ZOOM):
 # Return the tile no from the tile coordinate (x,y)
 def tile_no_by_tile_coord(tile_coord, max_tile_size=MAP_TILES_SIZE):
     # Operate using Google Maps tile size of 256x256 px
+    # The total number of tiles is calculated by:  2 ** (zoom*2)
+    # Eg.: For a zoom of 14; 16384 * 16384 = 268435456 tiles
+    # Hence no tile_no should exceed this number
     return tile_coord.xtile + tile_coord.ytile * max_tile_size.xtile
 
 

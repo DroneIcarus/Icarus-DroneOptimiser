@@ -1,5 +1,7 @@
 import configparser
 import pymongo
+from bson.binary import Binary
+import pickle
 import helpers.GMapsHelper as maphelper
 
 ################### Constants ###################
@@ -24,7 +26,7 @@ def get_waterbody(lat, lon, zoom=GMAPS_ZOOM):
     if item is not None:
         # The item is already in the DB
         print("In the DB")
-        return item['image']
+        return pickle.loads(item['image'])
     else:
         # The item needs to be inserted in the DB
         coordtile = maphelper.tile_to_latlon(tilecoord, zoom)
@@ -50,43 +52,24 @@ def search_waterbody_db(tile_coord):
 # Insert the tile in its database
 def insert_waterbody_db(tile_coord, image):
     tile_no = maphelper.tile_no_by_tile_coord(tile_coord)
-    item = __db_waterbodies.insert_one({"tile_no": tile_no, "image": image})
+    item = __db_waterbodies.insert_one({"tile_no": tile_no,
+                                        "image": Binary(pickle.dumps(image, protocol=pickle.HIGHEST_PROTOCOL))})
     if item is not None:
         return True
     else:
         return False
 
+
 # The total number of tiles is calculated by:  2 ** (zoom*2)
 # Eg.: For a zoom of 14; 16384 * 16384 = 268435456 tiles
 if __name__ == "__main__":
+    import cv2
     print("Main of waterImage.py")
-
-    file = open('/tmp/im.jpg', 'wb')
-    file1 = open('/tmp/im1.jpg', 'wb')
-    file2 = open('/tmp/im2.jpg', 'wb')
 
     im = get_waterbody(44.166444664458595, -74.3994140625)
     im1 = get_waterbody(44.166444664458595, -74.37744140625)
     im2 = get_waterbody(44.166444664458595, -74.35546875)
 
-    file.write(im)
-    file1.write(im1)
-    file2.write(im2)
-    file.close()
-    file1.close()
-    file2.close()
-
-    #coord = maphelper.latlon_to_coordinate(44.1644712, -74.3818805)
-
-    #print(get_waterbody(coord, 14))
-
-    #mydict = {"lat": 44.1644712, "lon": -74.3818805, "image": get_waterbody_image(44.1644712, -74.3818805)}
-
-    #x = __db_waterbodies.insert_one(mydict)
-
-    #print(x.inserted_id)
-
-    #print(__dbclient.list_database_names())
-
-    #print( __db_waterbodies.find_one({"lat": 44.1644712, "lon": -74.3818805}) )
-    #get_waterbody_image(44.1644712, -74.3818805)
+    cv2.imwrite('/tmp/im.jpg', im)
+    cv2.imwrite('/tmp/im1.jpg', im1)
+    cv2.imwrite('/tmp/im2.jpg', im2)
