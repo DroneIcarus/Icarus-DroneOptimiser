@@ -17,9 +17,9 @@ GMAPS_STATIC_SECRETS = config['gmaps_keys']['secret']
 
 ################### Google Maps URL ###################
 STATIC_MAP_URL = "https://maps.googleapis.com/maps/api/staticmap?"
-GMAPS_PARAMS = "center={},{}&zoom={}&size={}x{}&scale={}&maptype={}"  # &format=jpg-baseline"
+GMAPS_PARAMS = "center={},{}&zoom={}&size={}x{}&scale={}&maptype={}&format=jpg-baseline"
 # Style took from https://snazzymaps.com/style/138/water-only
-GMAPS_STYLE_ONLY_WATER = "&format=jpg-baseline&style=element:label|geometry.stroke|visibility:off&style=feature:road|visibility:off&style=feature:administrative|visibility:off&style=feature:poi|visibility:off&style=feature:water|saturation:-100|invert_lightness:true&style=feature|element:labels|visibility:off"
+GMAPS_STYLE_ONLY_WATER = "&style=element:label|geometry.stroke|visibility:off&style=feature:road|visibility:off&style=feature:administrative|visibility:off&style=feature:poi|visibility:off&style=feature:water|saturation:-100|invert_lightness:true&style=feature|element:labels|visibility:off"
 #GMAPS_STYLE_ONLY_WATER = "&style=feature:administrative|visibility:off&style=feature:landscape|visibility:off&style=feature:poi|visibility:off&style=feature:road|visibility:off&style=feature:transit|visibility:off&style=feature:water|element:geometry|hue:0x002bff|lightness:-78"
 
 
@@ -36,7 +36,12 @@ GMAPS_IMAGE_SIZE = ImagePixel(256, 256)           # The image size we want from 
 MAP_TILES_SIZE = TileCoordinate(2 ** GMAPS_ZOOM, 2 ** GMAPS_ZOOM)
 MAX_REQUEST_TRIES = 5
 
-# TODO: Remove Google copyright at the bottom of map images
+
+###################################################################
+#
+# Google Maps Static API communications functions
+#
+###################################################################
 
 
 # Handle the Google Map request
@@ -50,7 +55,7 @@ def get_google_maps_image(coord, remove_copyright=True):
     image = gmaps_request(base_url)
 
     if remove_copyright:
-        # Eating 24 pixels on the bottom. For smaller images it can be either 14, 18 or 20... further analysis needed.
+        # Eating 24 pixels on the bottom. For smaller images it can either be 14, 18 or 20... further analysis needed.
         pixelcoord = latlon_to_pixelcoord(coord)
         offset_coord = pixelcoord_to_latlon(ImagePixel(pixelcoord.x, pixelcoord.y + 24))
 
@@ -215,9 +220,6 @@ def tile_coord_by_tile_no(tile_no, max_tile_size=MAP_TILES_SIZE):
 
 if __name__ == "__main__":
     # NOTE: Google operates Maps using tiles of 256x256 pixels
-    import cv2
-    import numpy as np
-
     c = Coordinate(44.1644712, -74.3818805)
     b = latlon_to_tile(c, GMAPS_ZOOM)
     b = b._replace(xtile=b.xtile + 1)
