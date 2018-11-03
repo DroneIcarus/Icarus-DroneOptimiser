@@ -43,6 +43,7 @@ class Map:
         self.imageAdded = self.addImages(croppedImage)
         self.resolution = self.distanceXY([0, 0], [0, 1])
 
+    # Used only in here
     def getSatelliteImage(self, lat, lon):
         image = waterImage.get_waterbody(lat, lon)
         if image is not None:
@@ -51,6 +52,7 @@ class Map:
         else:
             sys.exit("Error: Fetching water image was unsuccessful. EXITING.")
 
+    # Used in MissionPanner.py
     def satImageProcess(self, image):
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
@@ -59,7 +61,7 @@ class Map:
         cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
         return thresh
 
-
+    # Used in MissionPanner.py
     def findLakeContour(self, imageFiltered, originalImage, lakeList):
         _, contour, hierarchy = cv2.findContours(imageFiltered, cv2.RETR_TREE,
                                                  cv2.CHAIN_APPROX_NONE)
@@ -78,6 +80,7 @@ class Map:
         # print("Lake contour detected")
         return originalImage
 
+    # Used only in here
     def addImages(self, images):
         line = len(images)
         column = len(images[0])
@@ -92,6 +95,8 @@ class Map:
         # print("Map constructed")
         return finalImage
 
+    # TODO: TOBE DELETED!
+    # Used only in here
     def cropImage(self, image):
         image = np.asarray(bytearray(image), dtype="uint8")
         image = cv2.imdecode(image, cv2.IMREAD_COLOR)
@@ -99,6 +104,7 @@ class Map:
         image = image[0:-19, 0:-19]
         return image
 
+    # Used only in here
     def xy2LatLon(self, point):
         xCenter = self.imageAdded.shape[1] // 2 + 1
         yCenter = self.imageAdded.shape[0] // 2 + 1
@@ -106,6 +112,7 @@ class Map:
         lat = self.verticalCenter + (yCenter - point[1]) * self.latNext / 601
         return lat, lon
 
+    # Used only in here
     def distanceXY(self, point1, point2):
         lat1, lon1 = self.xy2LatLon(point1)
         lat2, lon2 = self.xy2LatLon(point2)
