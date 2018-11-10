@@ -4,4 +4,4 @@
 logs/
 export/
 lakeRecognition/WaterBodiesImages/*
-
+*.pyc

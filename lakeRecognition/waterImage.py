@@ -19,10 +19,9 @@ __db = __dbclient[config['database']['name']]
 __db_waterbodies = __db["waterbodies_landingpoints"]
 
 
-# As of right now, it is only fetching the latlong corresponding tile
-def get_waterbody(lat, lon, zoom=GMAPS_ZOOM):
-    tilecoord = maphelper.latlon_to_tile(maphelper.latlon_to_coordinate(float(lat), float(lon)), zoom)
-    item = search_waterbody_db(tilecoord)
+def get_waterbody(xtile, ytile, zoom=GMAPS_ZOOM):
+    tilecoord = maphelper.xytile_to_tilecoordinate(xtile, ytile)
+    item = __search_waterbody_db(tilecoord)
     if item is not None:
         # The item is already in the DB
         print("In the DB")
@@ -35,7 +34,7 @@ def get_waterbody(lat, lon, zoom=GMAPS_ZOOM):
         # Make the transformation from image to landing points
 
         item = image
-        if insert_waterbody_db(tilecoord, item) is False:
+        if __insert_waterbody_db(tilecoord, item) is False:
             print("There was an error while inserting tile to DB. EXITING")
             exit(-1)
         else:
@@ -43,14 +42,47 @@ def get_waterbody(lat, lon, zoom=GMAPS_ZOOM):
             return item
 
 
+# Fetch (lat,lon) corresponding tile
+def get_waterbody_by_coordinate(lat, lon, zoom=GMAPS_ZOOM):
+    tilecoord = maphelper.latlon_to_tile(maphelper.latlon_to_coordinate(float(lat), float(lon)), zoom)
+    return get_waterbody(tilecoord.xtile, tilecoord.ytile, zoom)
+
+
+def get_waterbodies_by_startend(start_coord, end_coord, zoom=GMAPS_ZOOM):
+    import numpy as np
+    # Convert (lat,lon) to (x,y) tiles in order to construct easily a picture of all required tiles
+    start_tile_coord = maphelper.latlon_to_tile(maphelper.latlon_to_coordinate(float(start_coord.lat),
+                                                                               float(start_coord.lon)), zoom)
+    end_tile_coord = maphelper.latlon_to_tile(maphelper.latlon_to_coordinate(float(end_coord.lat),
+                                                                               float(end_coord.lon)), zoom)
+    # Sorting so it is the smallest number to the biggest
+    x = sorted([start_tile_coord.xtile, end_tile_coord.xtile])
+    y = sorted([start_tile_coord.ytile, end_tile_coord.ytile])
+
+    # Inclusive loop creating tiles array and rows pictures
+    xy_tiles = []
+    rows = []
+    j_it = 0
+    for j in range(y[0], y[1] + 1):
+        xy_tiles.append([])
+        for i in range(x[0], x[1] + 1):
+            print("X,Y = {},{}".format(i, j))
+            xy_tiles[j_it].append(get_waterbody(i, j))
+        rows.append(np.hstack(xy_tiles[j_it][:]))
+        j_it += 1
+
+    # Creating a picture with rows pictures
+    return np.vstack(rows[:])
+
+
 # Look if the tile (x,y) is in its database. Return the tile or None
-def search_waterbody_db(tile_coord):
+def __search_waterbody_db(tile_coord):
     tile_no = maphelper.tile_no_by_tile_coord(tile_coord)
     return __db_waterbodies.find_one({"tile_no": tile_no})
 
 
 # Insert the tile in its database
-def insert_waterbody_db(tile_coord, image):
+def __insert_waterbody_db(tile_coord, image):
     tile_no = maphelper.tile_no_by_tile_coord(tile_coord)
     item = __db_waterbodies.insert_one({"tile_no": tile_no,
                                         "image": Binary(pickle.dumps(image, protocol=pickle.HIGHEST_PROTOCOL))})
@@ -64,12 +96,9 @@ def insert_waterbody_db(tile_coord, image):
 # Eg.: For a zoom of 14; 16384 * 16384 = 268435456 tiles
 if __name__ == "__main__":
     import cv2
+    import numpy as np
     print("Main of waterImage.py")
-
-    im = get_waterbody(44.166444664458595, -74.3994140625)
-    im1 = get_waterbody(44.166444664458595, -74.37744140625)
-    im2 = get_waterbody(44.166444664458595, -74.35546875)
-
+    a = maphelper.Coordinate(43.156199, -82.235377)
+    b = maphelper.Coordinate(43.563453, -81.750665)
+    im = get_waterbodies_by_startend(b, a)
     cv2.imwrite('/tmp/im.jpg', im)
-    cv2.imwrite('/tmp/im1.jpg', im1)
-    cv2.imwrite('/tmp/im2.jpg', im2)

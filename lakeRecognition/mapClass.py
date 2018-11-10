@@ -5,13 +5,20 @@ import os
 from math import radians, cos, sin, asin, sqrt
 from lakeRecognition import waterImage
 from lakeRecognition.lakeClass import Lakes
+from helpers.GMapsHelper import Coordinate
+
+
+def find_lake_contour(start_coord, end_coord):
+    # Fetch images and put them together
+
+    return None
 
 
 class Map:
     def __init__(self, startLatitude, startLongitude, endLatitude, endLongitude):
-        self.lakeContour = []
-        self.contour = []
-        self.lakeArea = []
+        self.lakeContour = [] # unused
+        self.contour = [] # unused
+        self.lakeArea = [] # unused
 
         self.longNext = 0.05155
         self.latNext = -0.00000636 * float(startLatitude) ** 2 - 0.00005506 * float(startLatitude) + 0.05190551
@@ -45,7 +52,7 @@ class Map:
 
     # Used only in here
     def getSatelliteImage(self, lat, lon):
-        image = waterImage.get_waterbody(lat, lon)
+        image = waterImage.get_waterbody_by_coordinate(lat, lon)
         if image is not None:
             imCropped = self.cropImage(image)
             return imCropped
@@ -63,8 +70,11 @@ class Map:
 
     # Used in MissionPanner.py
     def findLakeContour(self, imageFiltered, originalImage, lakeList):
-        _, contour, hierarchy = cv2.findContours(imageFiltered, cv2.RETR_TREE,
-                                                 cv2.CHAIN_APPROX_NONE)
+        #imageFiltered = return of satImageProcess
+        #originalImage = self. imageAdded
+        #lakelist... useless var arg
+
+        useless_im, contour, hierarchy = cv2.findContours(imageFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         i = 0
         j = []
 
