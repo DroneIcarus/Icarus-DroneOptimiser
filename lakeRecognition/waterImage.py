@@ -72,7 +72,7 @@ def get_waterbodies_by_startend(start_coord, end_coord, zoom=GMAPS_ZOOM):
         j_it += 1
 
     # Creating a picture with rows pictures
-    return np.vstack(rows[:])
+    return maphelper.TileCoordinate(x[0], y[0]), np.vstack(rows[:])
 
 
 # Look if the tile (x,y) is in its database. Return the tile or None
@@ -101,4 +101,4 @@ if __name__ == "__main__":
     a = maphelper.Coordinate(43.156199, -82.235377)
     b = maphelper.Coordinate(43.563453, -81.750665)
     im = get_waterbodies_by_startend(b, a)
-    cv2.imwrite('/tmp/im.jpg', im)
+    cv2.imwrite('lakeRecognition/WaterBodiesImages/stacked_im.jpg', im)

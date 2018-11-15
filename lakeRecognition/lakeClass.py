@@ -12,10 +12,12 @@ def debug(str):
     if debugMode:
         print(str)
 
+
 class LandingPoint:
     def __init__(self, landingLat, landingLong, deriveLat, deriveLong):
         self.gpsLandingCoordinate = (landingLat, landingLong) #array of size 2
         self.gpsDeriveCoordinate = (deriveLat, deriveLong)
+
 
 class Lakes:
     def __init__(self, lakeContour, lakeArea, resolution):
@@ -119,9 +121,9 @@ class Lakes:
         bottomLeft = self.mapObject.xy2LatLon([left, bottom])
         topRight = self.mapObject.xy2LatLon([right, top])
         topLeft = self.mapObject.xy2LatLon([left, top])
-        centerLeft = self.mapObject.xy2LatLon([left, self.yCenter])
-        centerRight = self.mapObject.xy2LatLon([right, self.yCenter])
-        centerTop = self.mapObject.xy2LatLon([self.xCenter, top])
+        #centerLeft = self.mapObject.xy2LatLon([left, self.yCenter])
+        #centerRight = self.mapObject.xy2LatLon([right, self.yCenter])
+        #centerTop = self.mapObject.xy2LatLon([self.xCenter, top])
         center = self.mapObject.xy2LatLon([self.xCenter, self.yCenter])
         points.append(center)
         points.append(bottomRight)

@@ -5,16 +5,55 @@ import os
 from math import radians, cos, sin, asin, sqrt
 from lakeRecognition import waterImage
 from lakeRecognition.lakeClass import Lakes
-from helpers.GMapsHelper import Coordinate
-
-
-def find_lake_contour(start_coord, end_coord):
-    # Fetch images and put them together
-
-    return None
+from helpers.GMapsHelper import Coordinate, TileCoordinate, GMAPS_IMAGE_SIZE_REFERENCE, tile_to_latlon
 
 
 class Map:
+    def __init__(self, start_coord, end_coord):
+        self.orig_im_tile, self.lakeList, self.stacked_im, self.processed_im = self.find_water_contour(start_coord,
+                                                                                                       end_coord)
+
+    def find_water_contour(self, start_coord, end_coord):
+        # Fetch images between start and end coordinates
+        map_tile, stacked_im = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
+        processed_im = self.process_map_images(stacked_im)
+
+        # Let opencv find contours and identifies all different water bodies
+        lakeList = []
+        useless_im, contour, hierarchy = cv2.findContours(processed_im, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        i = 0
+        j = []
+
+        for c in contour:
+            if (hierarchy[0][i][3] == 0) and (cv2.contourArea(c) > 200):
+                j.append(i)
+            i += 1
+
+        # TODO: change hardcoded resolution value for the good one
+        # Creating a lake list with map resolution (hard-coded)
+        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), 6.439612653468929)) for i in j]
+
+        cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
+        cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
+
+        return map_tile, lakeList, stacked_im, processed_im
+
+    def process_map_images(self, image):
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+        thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
+        cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
+        cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
+        return thresh
+
+    def xy2LatLon(self, point):
+        xpoint_tile_im = self.orig_im_tile.xtile + point[0] // GMAPS_IMAGE_SIZE_REFERENCE.x
+        ypoint_tile_im = self.orig_im_tile.ytile + point[1] // GMAPS_IMAGE_SIZE_REFERENCE.y
+
+        return tile_to_latlon(TileCoordinate(xpoint_tile_im, ypoint_tile_im))
+
+
+class Map2:
     def __init__(self, startLatitude, startLongitude, endLatitude, endLongitude):
         self.lakeContour = [] # unused
         self.contour = [] # unused
@@ -54,8 +93,7 @@ class Map:
     def getSatelliteImage(self, lat, lon):
         image = waterImage.get_waterbody_by_coordinate(lat, lon)
         if image is not None:
-            imCropped = self.cropImage(image)
-            return imCropped
+            return image
         else:
             sys.exit("Error: Fetching water image was unsuccessful. EXITING.")
 
@@ -69,11 +107,12 @@ class Map:
         return thresh
 
     # Used in MissionPanner.py
-    def findLakeContour(self, imageFiltered, originalImage, lakeList):
+    def findLakeContour(self, imageFiltered, originalImage):
         #imageFiltered = return of satImageProcess
         #originalImage = self. imageAdded
         #lakelist... useless var arg
 
+        lakeList = []
         useless_im, contour, hierarchy = cv2.findContours(imageFiltered, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         i = 0
         j = []
@@ -88,7 +127,7 @@ class Map:
         cv2.drawContours(originalImage, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
         cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', originalImage)
         # print("Lake contour detected")
-        return originalImage
+        return lakeList
 
     # Used only in here
     def addImages(self, images):
@@ -105,21 +144,14 @@ class Map:
         # print("Map constructed")
         return finalImage
 
-    # TODO: TOBE DELETED!
-    # Used only in here
-    def cropImage(self, image):
-        image = np.asarray(bytearray(image), dtype="uint8")
-        image = cv2.imdecode(image, cv2.IMREAD_COLOR)
-        #return image
-        image = image[0:-19, 0:-19]
-        return image
-
-    # Used only in here
+    # Used here and in lakeClass
     def xy2LatLon(self, point):
+        print(point)
         xCenter = self.imageAdded.shape[1] // 2 + 1
         yCenter = self.imageAdded.shape[0] // 2 + 1
         lon = self.horizontalCenter + (point[0] - xCenter) * self.longNext / 601
         lat = self.verticalCenter + (yCenter - point[1]) * self.latNext / 601
+        print("LES LAT LON: {},{}".format(lat, lon))
         return lat, lon
 
     # Used only in here
@@ -133,4 +165,5 @@ class Map:
         c = 2 * asin(sqrt(a))
         # Radius of earth in kilometers is 6371
         km = 6371 * c
+        print("RESOLUTION: {}".format(km*1000))
         return km * 1000
