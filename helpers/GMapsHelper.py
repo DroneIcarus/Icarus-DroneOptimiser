@@ -2,7 +2,7 @@ import configparser
 import cv2
 import numpy as np
 from collections import namedtuple
-from math import sin, cos, tan, atan, sinh, pi, e, log, degrees, radians
+from math import sin, cos, tan, atan, sinh, pi, log, degrees, radians
 from urllib.request import urlopen
 from helpers.urlsigner import sign_url
 
@@ -32,7 +32,7 @@ ImagePixel = namedtuple('ImagePixel', ['x', 'y'])
 ################### Constants ###################
 GMAPS_ZOOM = 14
 GMAPS_IMAGE_SIZE_REFERENCE = ImagePixel(256, 256) # This is defined by Google Maps. NOT TO BE CHANGED.
-GMAPS_IMAGE_SIZE = ImagePixel(256, 256)           # The image size we want from google maps
+GMAPS_IMAGE_SIZE = GMAPS_IMAGE_SIZE_REFERENCE     # The image size we want from google maps
 MAP_TILES_SIZE = TileCoordinate(2 ** GMAPS_ZOOM, 2 ** GMAPS_ZOOM)
 MAX_REQUEST_TRIES = 5
 
@@ -126,7 +126,7 @@ def xytile_to_tilecoordinate(xtile, ytile):
 
 ###################################################################
 #
-# Getters functions for this file constants
+# Getters functions for this file constants/variables
 #
 ###################################################################
 
@@ -139,6 +139,7 @@ def get_zoom():
 # Return the total number of tiles horizontally and vertically
 def get_tile_size():
     return MAP_TILES_SIZE
+
 
 ###################################################################
 #

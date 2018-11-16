@@ -10,6 +10,7 @@ from helpers.GMapsHelper import Coordinate, TileCoordinate, GMAPS_IMAGE_SIZE_REF
 
 class Map:
     def __init__(self, start_coord, end_coord):
+        self.resolution = 0 # Going to be updated in map_meters_per_pixel()
         self.orig_im_tile, self.lakeList, self.stacked_im, self.processed_im = self.find_water_contour(start_coord,
                                                                                                        end_coord)
 
@@ -17,6 +18,7 @@ class Map:
         # Fetch images between start and end coordinates
         map_tile, stacked_im = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
         processed_im = self.process_map_images(stacked_im)
+        map_resolution = self.map_meters_per_pixel(map_tile)
 
         # Let opencv find contours and identifies all different water bodies
         lakeList = []
@@ -31,7 +33,7 @@ class Map:
 
         # TODO: change hardcoded resolution value for the good one
         # Creating a lake list with map resolution (hard-coded)
-        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), 6.439612653468929)) for i in j]
+        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), self.resolution)) for i in j]
 
         cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
         cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
@@ -49,8 +51,26 @@ class Map:
     def xy2LatLon(self, point):
         xpoint_tile_im = self.orig_im_tile.xtile + point[0] // GMAPS_IMAGE_SIZE_REFERENCE.x
         ypoint_tile_im = self.orig_im_tile.ytile + point[1] // GMAPS_IMAGE_SIZE_REFERENCE.y
-
         return tile_to_latlon(TileCoordinate(xpoint_tile_im, ypoint_tile_im))
+
+    def distance(self, p1, p2):
+        lat1, lon1, lat2, lon2 = map(radians, [p1.lat, p1.lon, p2.lat, p2.lon])
+        dlon = lon2 - lon1
+        dlat = lat2 - lat1
+        a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
+        c = 2 * asin(sqrt(a))
+        # Radius of earth in kilometers is 6371
+        distance_meters = 6371000 * c
+        return distance_meters
+
+    def map_meters_per_pixel(self, base_tile):
+        t1coord = tile_to_latlon(base_tile)
+        t2coord = tile_to_latlon(base_tile._replace(ytile=base_tile.ytile+1))
+        distance_m = self.distance(t1coord, t2coord)
+        print("Answer = {}".format(distance_m/GMAPS_IMAGE_SIZE_REFERENCE.x))
+        self.resolution = distance_m/GMAPS_IMAGE_SIZE_REFERENCE.x
+        return distance_m/GMAPS_IMAGE_SIZE_REFERENCE.x
+
 
 
 class Map2:
