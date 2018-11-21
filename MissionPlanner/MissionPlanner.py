@@ -33,12 +33,13 @@ class MissionPlanner(object):
         self.maximalMapPoint = self.__getMaximalMapPoint(gpsPointsList)
         self.nbMissionPoint = len(gpsPointsList)
         self.initialMissionItemList = plan.get_mission().get_missionitems()
+        self.missionItemsList2 = plan.get_mission().get_missionitems2()
 
         self.timeInMission = time.time() # todo : take from missionSettings
         self.timeSpentInMission = 0
         self.droneSpeed = missionSettings["droneMaxSpeed"] #km/h
 
-        self.weather = LongWeather(self.initialMissionItemList[0].get_x(), self.initialMissionItemList[0].get_y())
+        self.weather = LongWeather(self.missionItemsList2[0].get_x(), self.missionItemsList2[0].get_y())
 
         self.distanceMatrix = self.__getDistanceMatrix()
         self.__missionIndex = 0
@@ -95,9 +96,9 @@ class MissionPlanner(object):
         # TODO: Should become a cost matrix when we will find a way to evaluate a cost
         distanceMatrix = numpy.zeros((self.nbMissionPoint, self.nbMissionPoint))
         i = 0
-        for mItem in self.initialMissionItemList:
+        for mItem in self.missionItemsList2:
             j = 0
-            for mItem2 in self.initialMissionItemList:
+            for mItem2 in self.missionItemsList2:
                 distanceMatrix[i][j] = self.getTimeToFly(mItem, mItem2)
                 j+=1
             i+=1
@@ -132,7 +133,8 @@ class MissionPlanner(object):
             logger.warning("The node order is not good...")
             sys.exit("ERROR: MissionPlanner::getMissionPointOrder, the node order is incorrect.")
 
-        # logger.debug("Order of node: ", nodeOrder)
+        print("Order of node: ")
+        print(nodeOrder)
         return nodeOrder
 
     #Return a graph showing the link and graph of the result after running the tsp algorithm
@@ -152,11 +154,22 @@ class MissionPlanner(object):
     def __getPairedMissionPoints(self):
         result = []
         nodeOrder  = self.getMissionPointOrder()
+        surveyIndex = 0
         i = 0
         for index in nodeOrder:
             if i < len(nodeOrder) - 1:
                 nextIndex = nodeOrder[i + 1]
-                result.append((self.initialMissionItemList[index], self.initialMissionItemList[nextIndex]))
+                if(self.missionItemsList2[nextIndex].get_isSurvey()) :
+                    surveys = self.missionPlan.get_mission().get_surveyItems()
+                    surveyItems = surveys[surveyIndex].get_items()
+                    result.append((self.initialMissionItemList[index], surveyItems[0]))
+                    for iterator, item in enumerate(surveyItems) :
+                        if(len(surveyItems) < iterator + 1) :
+                            result.append((surveyItems[iterator], surveyItems[iterator + 1]))
+                        else :
+                            result.append((surveyItems[iterator], self.initialMissionItemList[nextIndex+1]))
+                else :
+                    result.append((self.initialMissionItemList[index], self.initialMissionItemList[nextIndex]))
             i=i+1
         return result
 
@@ -192,22 +205,23 @@ class MissionPlanner(object):
 
         #Lake detection
         map1 = Map(str(minLat),str(minLong), str(maxLat), str(maxLong))
+        print('Map done')
         imageProcessed = map1.satImageProcess(map1.imageAdded)
         imageWithContour = map1.findLakeContour(imageProcessed,map1.imageAdded,lakeList)
         [lake.cropContour(imageProcessed,map1) for lake in lakeList]
-        logger.debug('lake.cropContour done')
+        print('lake.cropContour done')
         [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in lakeList]
-        logger.debug('getLongWeather Done!')
+        print('getLongWeather Done!')
         self.__sortLakeList(lakeList)
-        logger.debug('__sortLakeList Done!')
+        print('__sortLakeList Done!')
         self.__exportLakesCenter(lakeList)
-        logger.debug('__exportLakesCenter Done!')
+        print('__exportLakesCenter Done!')
         self.__exportLakesContour(lakeList)
-        logger.debug('__exportLakesContour Done!')
+        print('__exportLakesContour Done!')
         self.__exportLakesSortPoint(lakeList)
-        logger.debug('__exportLakesSortPoint Done!')
+        print('__exportLakesSortPoint Done!')
         self.__exportLakesLandingPoint(lakeList)
-        logger.debug('__exportLakesLandingPoint Done!')
+        print('__exportLakesLandingPoint Done!')
         return lakeList
 
     #Retourne une liste de lacs avec leurs landing points se trouvant entre les 2 points GPS
@@ -275,12 +289,14 @@ class MissionPlanner(object):
 
     def __runAStar(self, start, end, lakeList):
         nodeList = self.__getAStarNodes(start, end, lakeList)
-        logger.info("Starting aStar process...");
+        logger.info("Starting aStar process...")
         logger.info("Nombre de nodes pour aStar: %i", len(nodeList))
 
 
         success, aStarResult = aStar(nodeList)
 
+        print("astar success : ")
+        print(success)
         #transform the aStar result into nodes
         result = []
         for value in aStarResult:
@@ -463,13 +479,16 @@ class MissionPlanner(object):
         logger.debug('run')
         #Plan a mission between each pairedPoint
         pairedMissionPoint = self.__getPairedMissionPoints()
-        logger.debug('__getPairedMissionPoints Done!')
+        print('__getPairedMissionPoints Done!')
         #Add the starting missionPoint
         self.__addMissionItem(pairedMissionPoint[0][0])
-        logger.debug('__addMissionItem Done!')
+        print('__addMissionItem Done!')
         #Get all the landing point
+
+        print(self.maximalMapPoint)
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
-        logger.debug('__getTotalLakeList Done!')
+        print('__getTotalLakeList Done!')
+        print("paired points : " + str(len(pairedMissionPoint)))
         for pairedPoint in pairedMissionPoint:
             i=0
             distanceBetweenPoints = pairedPoint[0].distanceTo(pairedPoint[1])
@@ -494,28 +513,39 @@ class MissionPlanner(object):
                 #Once we have every findLandingPoint and the start point and end point we can generate a graph for A* and run it
                 success, result = self.__runAStar(startPoint, pairedPoint[1], lakeList)
 
+                print("finished _runAStar")
                 if success:
+                    print("if success")
                     self.__compileAStarResult(result, lakeList)
+                    print("finished __compileAStarResult")
                 else:
                     logger.error("The last mission point wasn't reach... So the mission is probably impossible")
                     sys.exit("ERROR: The last mission point wasn't reach. The mission is probably impossible.")
 
             else:
+                print("__setAutonomy")
                 self.__setAutonomy(timeToFlyBetweenPoints)
+                print("__setAutonomy Finished")
                 #Add directly the end point
                 pairedPoint[1].setID('end')
+                print("__addMissionItem")
                 self.__addMissionItem(pairedPoint[1])
+                print("__addMissionItem finished")
 
+            print("__missionIndex +1 ..")
             #self.missionPlan.mission.set_missionitems2(self.finalMissionItemList)
             self.__missionIndex = self.__missionIndex + 1
 
             #Use to debug when the mission is not completly done
             partialMissionFileName = self.exportPath + 'partialMission_' + str(self.__missionIndex) + '.csv'
-            with open(partialMissionFileName, 'w') as f:
-                writer = csv.writer(f)
-                writer.writerows(self.resultingWay)
+            print("writing csv ..")
+            #with open(partialMissionFileName, 'w') as f:
+             #   writer = csv.writer(f)
+              #  writer.writerows(self.resultingWay)
 
+        print("set_missionitems2 ..")
         self.missionPlan.mission.set_missionitems2(self.finalMissionItemList)
+        print("set_missionitems2 finished")
         with open(self.exportPath + 'completeMission.csv', 'w') as f:
             writer = csv.writer(f)
             writer.writerows(self.resultingWay)

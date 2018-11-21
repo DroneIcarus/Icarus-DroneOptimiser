@@ -12,6 +12,7 @@ networkx = "*"
 requests = "*"
 pipfile = "*"
 pymongo = "*"
+shapely = "*"
 
 [dev-packages]
 

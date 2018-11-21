@@ -2,6 +2,7 @@ import sys
 import os.path
 import json
 import logging
+from shapely.geometry import Polygon
 from helpers.GPSHelper import distBetweenCoord
 from lakeRecognition.mapClass import Map
 from lakeRecognition.lakeClass import LandingPoint
@@ -29,9 +30,26 @@ class MissionComplexItem:
         self.polygon = item["polygon"]
         self.type = item["type"]
         self.version = item["version"]
+        self.index = -1
 
-    def setItems(self, items) :
+    def get_items(self):
+        item_arr = []
+        for item in self.transectStyleComplexItem["Items"] :
+            if item["command"] == 16 :
+                newMissionItem = MissionItem(item)
+                newMissionItem.set_isSurvey(True)
+                newMissionItem.set_surveyIndex(self.index)
+                item_arr.append(newMissionItem)
+        return item_arr
+
+    def set_items(self, items) :
         self.transectStyleComplexItem["items"] = items
+
+    def set_index(self, index):
+        self.index = index
+
+    def get_index(self):
+        return self.index
 
 # Only deals with SimpleItem as of Feb 22nd 2018
 class MissionItem:
@@ -54,6 +72,8 @@ class MissionItem:
         self.isClose = False
         self.nodeId = None
         self.landingPoint = None
+        self.isSurvey = False
+        self.surveyIndex = -1
 
     def setLandingPoint(self, landingPoint):
         if not isinstance(landingPoint, LandingPoint):
@@ -132,6 +152,18 @@ class MissionItem:
     def set_type(self, type):
         self.type = type
 
+    def get_isSurvey(self):
+        return self.isSurvey
+
+    def set_isSurvey(self, isSurvey):
+        self.isSurvey = isSurvey
+
+    def get_surveyIndex(self):
+        return self.surveyIndex
+
+    def set_surveyIndex(self, index):
+        self.surveyIndex = index
+
     def get_coordinate(self):
         return [self.x, self.y]
 
@@ -192,7 +224,10 @@ class Mission:
         self.plannedHomePosition = mission["plannedHomePosition"]
         self.vehicleType = mission["vehicleType"]
         self.version = mission["version"]
-        self.surveyItems = []
+        self.surveyItems = self.__fetch_survey_items(mission["items"])
+
+    def get_surveyItems(self):
+        return self.surveyItems
 
     def get_cruisespeed(self):
         return self.cruiseSpeed
@@ -225,6 +260,21 @@ class Mission:
                         missionItemList.append(mComplexItemObj)
         return missionItemList
 
+    def get_missionitems2(self):
+        missionItemList = []
+        surveyPointInserted = False
+        for mItem in self.missionItems:
+            if(mItem.type == "SimpleItem") :
+                if(mItem.command == 16 or mItem.command == 21 or mItem.command == 22) :
+                    if mItem.get_isSurvey() and not surveyPointInserted :
+                        missionItemList.append(mItem)
+                        surveyPointInserted = True
+                        print("SurveyPOINT  !!!!!!!!!!!!")
+                    elif not mItem.get_isSurvey() :
+                        missionItemList.append(mItem)
+
+        return missionItemList
+
     def get_brut_missionitems(self):
         return self.missionItems
 
@@ -234,27 +284,61 @@ class Mission:
     def set_missionitems2(self, _missionitems):
         # reconstruction des survey ..
         newMissionItems = []
-        hasComplexItem = False
         arrayOfSurvey = []
         surveyIndex = 0
-        for item in self.missionItems :
-            if (item.type == "ComplexItem" and hasattr(item, 'transectStyleComplexItem')) :
-                hasComplexItem = True
-                self.surveyItems.append(item)
-                for newItem in _missionitems:
-                    found = False
-                    for mComplexItem in item.transectStyleComplexItem["Items"]:
-                        if(newItem.get_coordinate() == [mComplexItem["params"][4], mComplexItem["params"][5]]):
+        print("len surveyItems")
+        print(str(len(self.surveyItems)))
+        print("len newItems")
+        print(str(len(_missionitems)))
+        if(len(self.surveyItems) > 0):
+            for newItem in _missionitems:
+                if newItem.get_isSurvey() :
+                    print("SURVEY INDEX :")
+                    print(newItem.get_surveyIndex())
+                    if newItem.get_surveyIndex() == surveyIndex :
+                        print(" THIS ITEM IS A SURVEY ITEM")
+                        arrayOfSurvey.append(newItem)
+                    else :
+                        if (len(arrayOfSurvey) != 0):  # > 2 because of creation of polygon
+                            if (len(arrayOfSurvey) > 2):
+                                print("Build another survey with new settings")
+                                newMissionItems.append(
+                                    ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
+                            else:
+                                print("Survey too small, creating new one with new settings")
+                            arrayOfSurvey.clear()
                             arrayOfSurvey.append(newItem)
-                            found = True
-                    if(len(arrayOfSurvey) != 0 and not found) :
-                        newMissionItems.append(((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
+                            surveyIndex = newItem.get_surveyIndex()
+
+                        print("Build another survey with new settings")
+                        newMissionItems.append(
+                            ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
+                        arrayOfSurvey.clear()
+                        arrayOfSurvey.append(newItem)
+                        surveyIndex = newItem.get_surveyIndex()
+                else :
+                    print(" THIS ITEM IS NOTTTTTT A SURVEY ITEM")
+                    if (len(arrayOfSurvey) != 0) : # > 2 because of creation of polygon
+                        if (len(arrayOfSurvey) > 2) :
+                            print("Build Survey")
+                            newMissionItems.append(
+                                ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
+                        else :
+                            print("Survey too small")
                         newMissionItems.append(newItem)
                         arrayOfSurvey.clear()
-                        surveyIndex += 1
-                    elif (len(arrayOfSurvey) == 0 and not found):
+
+                    else:
+                        print("Add mission simple point")
                         newMissionItems.append(newItem)
-        if (not hasComplexItem) : #modifier pour un attribu de la mission?
+
+            if (len(arrayOfSurvey) != 0 and len(arrayOfSurvey) > 2):  # > 2 because of creation of polygon
+                print("Build final Survey")
+                newMissionItems.append(
+                    ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
+
+        else : #modifier pour un attribu de la mission?
+            print("No Survey")
             newMissionItems = _missionitems
 
         self.missionItems = newMissionItems
@@ -279,40 +363,63 @@ class Mission:
 
     def get_waypoints(self):
         waypoints = []
-
+        surveyPointInserted = False
         # TODO: Voir MAV_CMD au lien http://mavlink.org/messages/common
         # (Phil) Je crois qu'on devrait prend d'autres commandes que seulement 16
         #        et même jeter des execeptions quand c'est un type qui n'est pas pris en compte.
-        for idx in range(len(self.missionItems)):
-            if(self.missionItems[idx].type == "SimpleItem") :
-                if (self.missionItems[idx].get_command() == 16
-                        or self.missionItems[idx].get_command() == 21
-                        or self.missionItems[idx].get_command() == 22):
-                    waypoints.append(self.missionItems[idx].get_coordinate())
-                elif (self.missionItems[idx].get_command() == 17):
-                    logger.error("The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
-                    sys.exit("ERROR: The mission point %d of type 'LOITER' isn't a valid type."%(idx+1))
-                elif (self.missionItems[idx].get_command() == 530):
+        for item in self.missionItems :
+            if item.type == "SimpleItem" :
+                if item.get_command() == 16 or item.get_command() == 21 or item.get_command() == 22:
+                    if item.get_isSurvey() and not surveyPointInserted :
+                        waypoints.append(item.get_coordinate())
+                        print("SurveyPOINT  !!!!!!!!!!!!")
+                        surveyPointInserted = True
+                    elif not item.get_isSurvey() :
+                        waypoints.append(item.get_coordinate())
+                elif (item.get_command() == 17):
+                    logger.error("The mission point of type 'LOITER' isn't a valid type.")
+                    sys.exit("ERROR: The mission point of type 'LOITER' isn't a valid type.")
+                elif (item.get_command() == 530):
                     #ToDo : Check what's 530 and add it
                     pass
                 else:
-                    logger.error("The mission point %d isn't a valid type."%(idx+1))
-                    sys.exit("ERROR: The mission point %d isn't a valid type."%(idx+1))
-            elif (self.missionItems[idx].type == "ComplexItem") :
-                for idx2 in range(len(self.missionItems[idx].transectStyleComplexItem['VisualTransectPoints'])):
-                    waypoints.append(self.missionItems[idx].transectStyleComplexItem['VisualTransectPoints'][idx2])
+                    logger.error("The mission point isn't a valid type.")
+                    #sys.exit("ERROR: The mission point %d isn't a valid type."%(idx+1))
 
+        print("number of waypoints : " + str(len(waypoints)))
         return waypoints
 
     @staticmethod
     def __fetch_items(items):
         items_arr = []
+        surveyIndex = 0
 
         for idx in range(len(items)):
             if (items[idx]["type"] == "SimpleItem") :
                 items_arr.append(MissionItem(items[idx]))
             elif (items[idx]["type"] == "ComplexItem") :
-                items_arr.append(MissionComplexItem(items[idx]))
+                for item in items[idx]["TransectStyleComplexItem"]["Items"] :
+                    surveyMissionItem = MissionItem(item)
+                    surveyMissionItem.set_isSurvey(True)
+                    print("setSurveyIndex")
+                    print(surveyIndex)
+                    surveyMissionItem.set_surveyIndex(surveyIndex)
+                    items_arr.append(surveyMissionItem)
+                surveyIndex += 1
+
+        return items_arr
+
+    @staticmethod
+    def __fetch_survey_items(items):
+        items_arr = []
+        surveyIndex = 0
+
+        for idx in range(len(items)):
+            if (items[idx]["type"] == "ComplexItem"):
+                survey = MissionComplexItem(items[idx])
+                survey.set_index(surveyIndex)
+                items_arr.append(survey)
+                surveyIndex += 1
 
         return items_arr
 
@@ -416,7 +523,7 @@ class MissionPlan:
                     items.append(item)
                 elif(item_obj.type == "ComplexItem") :
                     items.append(item_obj)
-            elif (item_obj["type"]) :
+            elif (item_obj["type"] == "ComplexItem") :
                 items.append(item_obj)
 
         return {
@@ -444,7 +551,7 @@ def is_json(json_file):
         return False
     return True
 
-def build_simple_mission_item(lat, lon, item_id, jumpId):
+def build_simple_mission_item(lat, lon, item_id, jumpId=999):
     command = 16
     #alt = 50
 
@@ -460,7 +567,7 @@ def build_simple_mission_item(lat, lon, item_id, jumpId):
     return {
             "autoContinue": True,
             "command": command,
-            "doJumpId": jumpId or 999,
+            "doJumpId": jumpId,
             "frame": 3,
             "params": [
                 param1,
@@ -493,6 +600,7 @@ def build_camera_trigger_item(id) :
     }
 
 def build_survey_mission_item(arrayOfSimpleItems, surveyItem) :
+    points = []
     coords = []
     if(len(arrayOfSimpleItems) == 0) :
         items = []
@@ -501,10 +609,19 @@ def build_survey_mission_item(arrayOfSimpleItems, surveyItem) :
             build_simple_mission_item(arrayOfSimpleItems[0].get_x(), arrayOfSimpleItems[0].get_y(), "waypoint", 0),
             build_camera_trigger_item(1)
         ]
+        coords.append(arrayOfSimpleItems[0].get_coordinate())
+        points = [(arrayOfSimpleItems[0].get_x(), arrayOfSimpleItems[0].get_y())]
+
         for idx, val in enumerate(arrayOfSimpleItems):
             if(idx != 0) :
                 items.append(build_simple_mission_item(val.get_x(), val.get_y(),"waypoint", idx))
                 coords.append(val.get_coordinate())
+                points.append((val.get_x(), val.get_y()))
+
+    polygon = Polygon(points)
+    poly = [[polygon.bounds[0],polygon.bounds[1]], [polygon.bounds[0],polygon.bounds[3]],
+             [polygon.bounds[2],polygon.bounds[3]], [polygon.bounds[2],polygon.bounds[1]]]
+
 
     return {
             "TransectStyleComplexItem": {
@@ -521,10 +638,7 @@ def build_survey_mission_item(arrayOfSimpleItems, surveyItem) :
             "complexItemType": surveyItem.complexItemType,
             "entryLocation": surveyItem.entryLocation,
             "flyAlternateTransects": surveyItem.flyAlternateTransects,
-            "polygon": surveyItem.polygon,
+            "polygon": poly,
             "type": surveyItem.type,
-            "version": surveyItem.type
+            "version": surveyItem.version
         }
-
-
-
