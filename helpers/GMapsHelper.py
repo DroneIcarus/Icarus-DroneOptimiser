@@ -124,6 +124,10 @@ def latlon_to_coordinate(lat, lon):
 def xytile_to_tilecoordinate(xtile, ytile):
     return TileCoordinate(xtile, ytile)
 
+
+# Convert (xpixel, ypixel) to Map Coordinate tuple
+def xypixel_to_mapcoordinate(xpixel, ypixel):
+    return MapCoordinate(xpixel, ypixel)
 ###################################################################
 #
 # Getters functions for this file constants/variables

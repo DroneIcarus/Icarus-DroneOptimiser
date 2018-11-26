@@ -174,18 +174,6 @@ class MissionPlanner(object):
             logger.error("No point to land between the mission points so the mission is probably impossible")
             sys.exit("ERROR: No point to land between the mission points. The mission is probably impossible.")
 
-    def getLandinggPointNumberByLake(self):
-        count = 0
-        for i in range(len(lakeList)):
-            count = len(lakeList[i].getLandingPoint()) + count
-            logger.info("landingPoints %i",len(lakeList[i].getLandingPoint()))
-        logger.info("Count total: %i",count)
-        # logger.debug("Lon s",lakeList[0].getLandingPoint()[0][0][0])
-        # logger.debug("Lat s",lakeList[0].getLandingPoint()[0][0][1])
-        # logger.debug("Lon e",lakeList[len(lakeList)-1].getLandingPoint()[0][0][0])
-        # logger.debug("Lat e",lakeList[len(lakeList)-1].getLandingPoint()[0][0][1])
-        return count
-
     #Retourne la liste de lacs avec leurs landing points se trouvant dans la totalité des limites de la mission
     def __getTotalLakeList(self, minLat, maxLat, minLong, maxLong):
         start_coor = Coordinate(minLat, minLong)
@@ -193,13 +181,7 @@ class MissionPlanner(object):
 
         #Lake detection
         map1 = Map(start_coor, end_coord)
-
-        #map1 = Map(str(minLat),str(minLong), str(maxLat), str(maxLong))
-        #imageProcessed = map1.satImageProcess(map1.imageAdded)
-        #lakeList = map1.findLakeContour(imageProcessed,map1.imageAdded)
-
-        [lake.cropContour(map1.processed_im, map1) for lake in map1.lakeList]
-
+        [lake.cropContour(map1) for lake in map1.lakeList]
         [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in map1.lakeList]
 
         self.__sortLakeList(map1.lakeList)
@@ -224,7 +206,7 @@ class MissionPlanner(object):
         #imageProcessed = map1.satImageProcess(map1.imageAdded)
         #lakeList = map1.findLakeContour(imageProcessed, map1.imageAdded)
 
-        [lake.cropContour(map1.processed_im, map1) for lake in map1.lakeList]
+        [lake.cropContour(map1) for lake in map1.lakeList]
 
         [lake.findLandingPoint(self.weather.getLongWeather(),int(time.time()), self.__chargingTime*60) for lake in map1.lakeList]
         self.__sortLakeList(map1.lakeList)

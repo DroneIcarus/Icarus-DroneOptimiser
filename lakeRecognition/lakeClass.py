@@ -141,15 +141,17 @@ class Lakes:
         # print("centerLeft", centerLeft)
         # print("centerTop", centerTop)
 
-    def cropContour(self, imProcessed, mapObject):
+    def cropContour(self, mapObject):
         self.mapObject = mapObject
         x1, y1 = self.lakeContour.min(axis=0)[0]
         x2, y2 = self.lakeContour.max(axis=0)[0]
         self.xCenter = (x2 + x1) // 2
         self.yCenter = (y2 + y1) // 2
         self.centerPoint = mapObject.xy2LatLon([self.xCenter, self.yCenter])
-        self.contourImage = imProcessed[y1:y2, x1:x2]
+        self.contourImage = self.mapObject.processed_im[y1:y2, x1:x2]
         self.lakeContour = self.lakeContour - [x1, y1]
+
+        print("Center:({},{}); CenterPoint:{}".format(self.xCenter, self.yCenter, self.centerPoint))
 
     def xy2LatLon(self, point):
         # xc and yc are the center of the image of the lake in pixel
@@ -256,24 +258,14 @@ class Lakes:
                                 cv2.fillConvexPoly(self.contourImage, point, (122,122,122))
                                 # cv2.imwrite("WaterBodiesImages/" + "vector.jpg", tempImage3)
 
-
-
         for lp in self.landingPoint:
             self.contourImage[lp[0], lp[1]] = 255
 
-        cv2.imwrite("WaterBodiesImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
-        # print(len(self.landingPoint))
-        # print("There is %d landing point" % (len(self.gpsLandingPoint)))
+        cv2.imwrite("lakeRecognition/WaterBodiesImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
         return self.landingList
 
     def getLandingPoint(self):
-        # temp= []
-        # temp.append([self.centerPoint])
-        # return temp
-
         return self.landingList
-
-        # return self.getContourPoint()
 
     def getLakeCenter(self):
         return self.centerPoint
