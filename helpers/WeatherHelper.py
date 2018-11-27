@@ -34,9 +34,13 @@ def getOpenWeather(latitude, longitude):
     windSpeed = []
     windDirection = []
     cloudCover = []
+    print(currentWeather_data)
     time.append(int(currentWeather_data["dt"]))
     windSpeed.append(float(currentWeather_data["wind"]["speed"]))
-    windDirection.append(float(currentWeather_data["wind"]["deg"]))
+    if hasattr(currentWeather_data["wind"], 'deg'):
+        windDirection.append(float(currentWeather_data["wind"]["deg"]))
+    else :
+        windDirection.append(float(0))
     cloudCover.append(int(currentWeather_data["clouds"]["all"]))
 
     for i in range(1, len(forecast_data["list"]) + 1):

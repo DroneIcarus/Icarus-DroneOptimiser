@@ -141,7 +141,7 @@ class MissionItem:
         self.y = y
 
     def get_z(self):
-        return self.x
+        return self.z
 
     def set_z(self, z):
         self.z = z
@@ -269,7 +269,6 @@ class Mission:
                     if mItem.get_isSurvey() and not surveyPointInserted :
                         missionItemList.append(mItem)
                         surveyPointInserted = True
-                        print("SurveyPOINT  !!!!!!!!!!!!")
                     elif not mItem.get_isSurvey() :
                         missionItemList.append(mItem)
 
@@ -286,18 +285,16 @@ class Mission:
         newMissionItems = []
         arrayOfSurvey = []
         surveyIndex = 0
-        print("len surveyItems")
-        print(str(len(self.surveyItems)))
-        print("len newItems")
-        print(str(len(_missionitems)))
+        print("FIRST ONE")
+        print(_missionitems[0].get_coordinate())
+        print(_missionitems[0].get_isSurvey())
         if(len(self.surveyItems) > 0):
             for newItem in _missionitems:
                 if newItem.get_isSurvey() :
-                    print("SURVEY INDEX :")
-                    print(newItem.get_surveyIndex())
                     if newItem.get_surveyIndex() == surveyIndex :
-                        print(" THIS ITEM IS A SURVEY ITEM")
                         arrayOfSurvey.append(newItem)
+                        print("Insert in new survey -- Coords :")
+                        print(newItem.get_coordinate())
                     else :
                         if (len(arrayOfSurvey) != 0):  # > 2 because of creation of polygon
                             if (len(arrayOfSurvey) > 2):
@@ -306,34 +303,33 @@ class Mission:
                                     ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
                             else:
                                 print("Survey too small, creating new one with new settings")
+                        else :
                             arrayOfSurvey.clear()
-                            arrayOfSurvey.append(newItem)
-                            surveyIndex = newItem.get_surveyIndex()
-
-                        print("Build another survey with new settings")
-                        newMissionItems.append(
-                            ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
-                        arrayOfSurvey.clear()
                         arrayOfSurvey.append(newItem)
                         surveyIndex = newItem.get_surveyIndex()
+                        print("Build another survey with new settings")
+                        print("Insert in new survey -- Coords :")
+                        print(newItem.get_coordinate())
                 else :
-                    print(" THIS ITEM IS NOTTTTTT A SURVEY ITEM")
                     if (len(arrayOfSurvey) != 0) : # > 2 because of creation of polygon
                         if (len(arrayOfSurvey) > 2) :
-                            print("Build Survey")
+                            print("============= BUILD SURVEY =============")
                             newMissionItems.append(
                                 ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
                         else :
-                            print("Survey too small")
+                            print("survey too small")
+                        print("Insert simple item 1 -- Coords :")
+                        print(newItem.get_coordinate())
                         newMissionItems.append(newItem)
                         arrayOfSurvey.clear()
 
                     else:
-                        print("Add mission simple point")
+                        print("Insert simple item 2 -- Coords :")
+                        print(newItem.get_coordinate())
                         newMissionItems.append(newItem)
 
             if (len(arrayOfSurvey) != 0 and len(arrayOfSurvey) > 2):  # > 2 because of creation of polygon
-                print("Build final Survey")
+                print("============= BUILD SURVEY =============")
                 newMissionItems.append(
                     ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
 
@@ -372,7 +368,8 @@ class Mission:
                 if item.get_command() == 16 or item.get_command() == 21 or item.get_command() == 22:
                     if item.get_isSurvey() and not surveyPointInserted :
                         waypoints.append(item.get_coordinate())
-                        print("SurveyPOINT  !!!!!!!!!!!!")
+                        print("SURVEY POINT -- Coords :")
+                        print(item.get_coordinate())
                         surveyPointInserted = True
                     elif not item.get_isSurvey() :
                         waypoints.append(item.get_coordinate())
@@ -401,8 +398,6 @@ class Mission:
                 for item in items[idx]["TransectStyleComplexItem"]["Items"] :
                     surveyMissionItem = MissionItem(item)
                     surveyMissionItem.set_isSurvey(True)
-                    print("setSurveyIndex")
-                    print(surveyIndex)
                     surveyMissionItem.set_surveyIndex(surveyIndex)
                     items_arr.append(surveyMissionItem)
                 surveyIndex += 1
@@ -499,7 +494,7 @@ class MissionPlan:
 
     def to_json(self):
         items = []
-
+        i = 0
         for idx, item_obj in enumerate(self.mission.get_brut_missionitems()):
 
             if (hasattr(item_obj, 'type')) :
@@ -507,7 +502,7 @@ class MissionPlan:
                     item = {
                         "autoContinue": item_obj.get_autocontinue(),
                         "command": item_obj.get_command(),
-                        "doJumpId": idx + 1,
+                        "doJumpId": i,
                         "frame": item_obj.get_frame(),
                         "params": [
                             item_obj.get_param1(),
@@ -521,10 +516,18 @@ class MissionPlan:
                         "type": item_obj.get_type()
                     }
                     items.append(item)
+                    i += 1
                 elif(item_obj.type == "ComplexItem") :
+                    for cItem in item_obj["TransectStyleComplexItem"]["Items"] :
+                        cItem.doJumpId = i
+                        i += 1
                     items.append(item_obj)
             elif (item_obj["type"] == "ComplexItem") :
+                for cItem in item_obj["TransectStyleComplexItem"]["Items"]:
+                    cItem["doJumpId"] = i
+                    i += 1
                 items.append(item_obj)
+
 
         return {
             "fileType": self.missionSettings.get_filetype(),
@@ -632,7 +635,7 @@ def build_survey_mission_item(arrayOfSimpleItems, surveyItem) :
                 "Items" : items,
                 "Refly90Degrees" : surveyItem.transectStyleComplexItem["Refly90Degrees"],
                 "TurnAroundDistance" : surveyItem.transectStyleComplexItem["TurnAroundDistance"],
-                "VisualTransectPoints" : coords,
+                "VisualTransectPoints" : coords, "version" : 1,
             },
             "angle": surveyItem.angle,
             "complexItemType": surveyItem.complexItemType,
