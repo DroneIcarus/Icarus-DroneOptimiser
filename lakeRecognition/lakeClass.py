@@ -1,9 +1,7 @@
 import cv2
-import sys, os.path
 import numpy as np
-from math import radians, degrees, cos, sin, sqrt
-from helpers.GPSHelper import bearingQuadrantAngle, calcBearing, calcGPSDestination, distBetweenCoord
-from operator import itemgetter
+from math import radians, cos, sin, sqrt
+from helpers.GPSHelper import calcBearing, calcGPSDestination, distBetweenCoord
 
 debugMode = False
 
@@ -57,22 +55,6 @@ class Lakes:
             maxLong = maxLongLP.gpsLandingCoordinate
             minLong = minLatLP.gpsLandingCoordinate
 
-
-            # maxLat = max(gpsListPoint,key=itemgetter(0))
-            # minLat = min(gpsListPoint,key=itemgetter(0))
-            # maxLong = max(gpsListPoint,key=itemgetter(1))
-            # minLong = min(gpsListPoint,key=itemgetter(1))
-
-            # maxLatIndex = gpsListPoint.index(max(gpsListPoint,key=itemgetter(0)))
-            # minLatIndex = gpsListPoint.index(min(gpsListPoint,key=itemgetter(0)))
-            # maxLongIndex = gpsListPoint.index(max(gpsListPoint,key=itemgetter(1)))
-            # minLongIndex = gpsListPoint.index(min(gpsListPoint,key=itemgetter(1)))
-            #
-            # derivePoints.append(self.gpsDerivePoint[maxLatIndex])
-            # derivePoints.append(self.gpsDerivePoint[minLatIndex])
-            # derivePoints.append(self.gpsDerivePoint[maxLongIndex])
-            # derivePoints.append(self.gpsDerivePoint[minLongIndex])
-
             points.append(maxLatLP)
             points.append(minLatLP)
             points.append(maxLongLP)
@@ -118,13 +100,11 @@ class Lakes:
         top = self.yCenter - (self.width/2)
 
         bottomRight = self.mapObject.xy2LatLon([right, bottom])
-        bottomLeft = self.mapObject.xy2LatLon([left, bottom])
-        topRight = self.mapObject.xy2LatLon([right, top])
-        topLeft = self.mapObject.xy2LatLon([left, top])
-        #centerLeft = self.mapObject.xy2LatLon([left, self.yCenter])
-        #centerRight = self.mapObject.xy2LatLon([right, self.yCenter])
-        #centerTop = self.mapObject.xy2LatLon([self.xCenter, top])
-        center = self.mapObject.xy2LatLon([self.xCenter, self.yCenter])
+        bottomLeft  = self.mapObject.xy2LatLon([left, bottom])
+        topRight    = self.mapObject.xy2LatLon([right, top])
+        topLeft     = self.mapObject.xy2LatLon([left, top])
+        center      = self.mapObject.xy2LatLon([self.xCenter, self.yCenter])
+
         points.append(center)
         points.append(bottomRight)
         points.append(bottomLeft)
@@ -132,15 +112,8 @@ class Lakes:
         points.append(topLeft)
 
         return points
-        # print("centerPoint: ", self.centerPoint)
-        # print("bottomRight", bottomRight)
-        # print("bottomLeft", bottomLeft)
-        # print("topRight", topRight)
-        # print("topLeft", topLeft)
-        # print("centerRight", centerRight)
-        # print("centerLeft", centerLeft)
-        # print("centerTop", centerTop)
 
+    # Find the contour of the water body
     def cropContour(self, mapObject):
         self.mapObject = mapObject
         x1, y1 = self.lakeContour.min(axis=0)[0]
@@ -150,8 +123,6 @@ class Lakes:
         self.centerPoint = mapObject.xy2LatLon([self.xCenter, self.yCenter])
         self.contourImage = self.mapObject.processed_im[y1:y2, x1:x2]
         self.lakeContour = self.lakeContour - [x1, y1]
-
-        print("Center:({},{}); CenterPoint:{}".format(self.xCenter, self.yCenter, self.centerPoint))
 
     def xy2LatLon(self, point):
         # xc and yc are the center of the image of the lake in pixel
@@ -261,7 +232,7 @@ class Lakes:
         for lp in self.landingPoint:
             self.contourImage[lp[0], lp[1]] = 255
 
-        cv2.imwrite("lakeRecognition/WaterBodiesImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
+        cv2.imwrite("lakeRecognition/WaterBodiesImages/{},{}.jpg".format(self.centerPoint.lat, self.centerPoint.lon), self.contourImage)
         return self.landingList
 
     def getLandingPoint(self):

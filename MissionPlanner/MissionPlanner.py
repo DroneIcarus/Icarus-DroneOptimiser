@@ -160,7 +160,7 @@ class MissionPlanner(object):
             i=i+1
         return result
 
-    #Delete the lake with no landing point
+    # Delete the lake with no landing point
     def __sortLakeList(self, lakeList):
         ToDelete = []
         # TODO: Mettre dans une seule for loop
@@ -174,7 +174,7 @@ class MissionPlanner(object):
             logger.error("No point to land between the mission points so the mission is probably impossible")
             sys.exit("ERROR: No point to land between the mission points. The mission is probably impossible.")
 
-    #Retourne la liste de lacs avec leurs landing points se trouvant dans la totalité des limites de la mission
+    # Retourne la liste de lacs avec leurs landing points se trouvant dans la totalité des limites de la mission
     def __getTotalLakeList(self, minLat, maxLat, minLong, maxLong):
         start_coor = Coordinate(minLat, minLong)
         end_coord = Coordinate(maxLat, maxLong)
@@ -185,7 +185,6 @@ class MissionPlanner(object):
         [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in map1.lakeList]
 
         self.__sortLakeList(map1.lakeList)
-
         self.__exportLakesCenter(map1.lakeList)
         self.__exportLakesContour(map1.lakeList)
         self.__exportLakesSortPoint(map1.lakeList)
@@ -193,7 +192,7 @@ class MissionPlanner(object):
 
         return map1.lakeList
 
-    #Retourne une liste de lacs avec leurs landing points se trouvant entre les 2 points GPS
+    # Retourne une liste de lacs avec leurs landing points se trouvant entre les 2 points GPS
     def __getLakeList(self, gpsPoint1, gpsPoint2):
         start_coor = Coordinate(gpsPoint1.get_x, gpsPoint1.get_y)
         end_coord  = Coordinate(gpsPoint2.get_x, gpsPoint2.get_y)
@@ -296,7 +295,7 @@ class MissionPlanner(object):
         i=0
         for lake in lakeList:
             for point in lake.getContourPoint():
-                toExport.append([point[0], point[1], i])
+                toExport.append([point.lat, point.lon, i])
                 pass
             i = i + 1
 

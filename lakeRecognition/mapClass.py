@@ -2,12 +2,11 @@ import cv2
 from math import radians, cos, sin, asin, sqrt
 from lakeRecognition import waterImage
 from lakeRecognition.lakeClass import Lakes
-from helpers.GMapsHelper import GMAPS_IMAGE_SIZE_REFERENCE, tile_to_latlon, xypixel_to_mapcoordinate, pixelcoord_to_latlon
+from helpers.GMapsHelper import GMAPS_IMAGE_SIZE_REFERENCE, tile_to_latlon, xypixel_to_mapcoordinate, pixelcoord_to_latlon, get_google_maps_image, Coordinate, latlon_to_tile
 
 
 class Map:
     def __init__(self, start_coord, end_coord):
-        self.resolution = 0 # Going to be updated in find_water_contour()
         self.orig_im_tile, self.lakeList, self.stacked_im, self.processed_im = self.find_water_contour(start_coord,
                                                                                                        end_coord)
 
@@ -15,7 +14,7 @@ class Map:
         # Fetch images between start and end coordinates
         map_tile, stacked_im = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
         processed_im = self.process_map_images(stacked_im)
-        self.resolution = self.map_meters_per_pixel(map_tile)
+        resolution = self.map_meters_per_pixel(map_tile)
 
         # Let opencv find contours and identifies all different water bodies
         lakeList = []
@@ -29,7 +28,7 @@ class Map:
             i += 1
 
         # Creating a lake list with map resolution
-        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), self.resolution)) for i in j]
+        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), resolution)) for i in j]
 
         cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
         cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
@@ -44,16 +43,14 @@ class Map:
         cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
         return thresh
 
-    # Find the (lat, lon) from the give tile point
+    # Find the (lat, lon) from the given stacked images point
     # TODO: Change tile  for  actual (lat,lon)
     def xy2LatLon(self, point):
-        map_xpixel = self.orig_im_tile.xtile * GMAPS_IMAGE_SIZE_REFERENCE.x + point[0]
-        map_ypixel = self.orig_im_tile.ytile * GMAPS_IMAGE_SIZE_REFERENCE.y + point[1]
-        print("The orig im: {}".format(self.orig_im_tile))
-        print("The given point: {}".format(point))
-        print("Point: {}".format(map_xpixel, map_ypixel))
+        map_xpixel = self.orig_im_tile.xtile * GMAPS_IMAGE_SIZE_REFERENCE.x - GMAPS_IMAGE_SIZE_REFERENCE.x/2 + point[0]
+        map_ypixel = self.orig_im_tile.ytile * GMAPS_IMAGE_SIZE_REFERENCE.y - GMAPS_IMAGE_SIZE_REFERENCE.y/2 + point[1]
         return pixelcoord_to_latlon(xypixel_to_mapcoordinate(map_xpixel, map_ypixel))
 
+    # Calculate the distance between two (lat,lon) in meters
     def distance(self, p1, p2):
         lat1, lon1, lat2, lon2 = map(radians, [p1.lat, p1.lon, p2.lat, p2.lon])
         dlon = lon2 - lon1
@@ -71,3 +68,11 @@ class Map:
         distance_m = self.distance(t1coord, t2coord)
         return distance_m/GMAPS_IMAGE_SIZE_REFERENCE.x
 
+
+if __name__ == "__main__":
+    coord = tile_to_latlon(latlon_to_tile(Coordinate(47.748424, -72.902954)))
+    print("Initial coord: {}".format(coord))
+    map1 = Map(coord, coord)
+    xylatlon = map1.xy2LatLon([0,0])
+    print("Final coord: {}".format(xylatlon))
+    print("map_pixel: {}".format(map1.orig_im_tile))

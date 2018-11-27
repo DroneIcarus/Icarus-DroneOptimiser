@@ -24,7 +24,7 @@ def get_waterbody(xtile, ytile, zoom=GMAPS_ZOOM):
     item = __search_waterbody_db(tilecoord)
     if item is not None:
         # The item is already in the DB
-        print("In the DB")
+        print("{} already in the DB".format(tilecoord))
         return pickle.loads(item['image'])
     else:
         # The item needs to be inserted in the DB
@@ -38,7 +38,7 @@ def get_waterbody(xtile, ytile, zoom=GMAPS_ZOOM):
             print("There was an error while inserting tile to DB. EXITING")
             exit(-1)
         else:
-            print("Inserted in the DB")
+            print("{} has been inserted in the DB".format(tilecoord))
             return item
 
 
@@ -66,7 +66,6 @@ def get_waterbodies_by_startend(start_coord, end_coord, zoom=GMAPS_ZOOM):
     for j in range(y[0], y[1] + 1):
         xy_tiles.append([])
         for i in range(x[0], x[1] + 1):
-            print("X,Y = {},{}".format(i, j))
             xy_tiles[j_it].append(get_waterbody(i, j))
         rows.append(np.hstack(xy_tiles[j_it][:]))
         j_it += 1
