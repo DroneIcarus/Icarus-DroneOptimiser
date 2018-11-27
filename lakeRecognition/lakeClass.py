@@ -4,7 +4,7 @@ from math import radians, cos, sin, sqrt
 from helpers.GPSHelper import calcBearing, calcGPSDestination, distBetweenCoord
 
 debugMode = False
-logger = logging.getLogger(__name__)
+#logger = logging.getLogger(__name__)
 
 def debug(str):
     if debugMode:
@@ -179,7 +179,7 @@ class Lakes:
         lastJ = 0
         lastI = 0
         idetected = False
-        logger.debug('findLandingPoint..')
+        #logger.debug('findLandingPoint..')
         for i in range(0, imax, 5):
             jdetected = False
 
