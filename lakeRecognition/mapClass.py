@@ -1,67 +1,24 @@
-import sys
 import cv2
-import numpy as np
-import os
 from math import radians, cos, sin, asin, sqrt
 from lakeRecognition import waterImage
 from lakeRecognition.lakeClass import Lakes
+from helpers.GMapsHelper import GMAPS_IMAGE_SIZE_REFERENCE, tile_to_latlon, xypixel_to_mapcoordinate, pixelcoord_to_latlon, get_google_maps_image, Coordinate, latlon_to_tile
 
 
 class Map:
-    def __init__(self, startLatitude, startLongitude, endLatitude, endLongitude):
-        self.lakeContour = []
-        self.contour = []
-        self.lakeArea = []
+    def __init__(self, start_coord, end_coord):
+        self.orig_im_tile, self.lakeList, self.stacked_im, self.processed_im = self.find_water_contour(start_coord,
+                                                                                                       end_coord)
 
-        self.longNext = 0.05155
-        self.latNext = -0.00000636 * float(startLatitude) ** 2 - 0.00005506 * float(startLatitude) + 0.05190551
+    def find_water_contour(self, start_coord, end_coord):
+        # Fetch images between start and end coordinates
+        map_tile, stacked_im = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
+        processed_im = self.process_map_images(stacked_im)
+        resolution = self.map_meters_per_pixel(map_tile)
 
-        self.latitudeDir = 'up' if float(startLatitude) < float(endLatitude) else 'down'
-        self.latitudeIt = np.ceil(np.absolute(float(startLatitude) - float(endLatitude)) / self.latNext) // 2 * 2 + 1
-        if (self.latitudeDir == 'down'):
-            self.latitude = [float(startLatitude) - i * self.latNext for i in range(0, self.latitudeIt.astype(int))]
-        elif (self.latitudeDir == 'up'):
-            self.latitude = [float(endLatitude) - i * self.latNext for i in range(0, self.latitudeIt.astype(int))]
-
-        self.longitudeDir = 'left' if float(startLongitude) < float(endLongitude) else 'right'
-        self.longitudeIt = np.ceil(
-            np.absolute(float(startLongitude) - float(endLongitude)) / self.longNext) // 2 * 2 + 1
-        if (self.longitudeDir == 'left'):
-            self.longitude = [float(startLongitude) + i * self.longNext for i in range(0, self.longitudeIt.astype(int))]
-        elif (self.longitudeDir == 'right'):
-            self.longitude = [float(endLongitude) + i * self.longNext for i in range(0, self.longitudeIt.astype(int))]
-
-        self.horizontalCenter = self.longitude[(self.longitudeIt // 2 + 1).astype(int) - 1]
-        self.verticalCenter = self.latitude[(self.latitudeIt // 2 + 1).astype(int) - 1]
-
-        croppedImage = [[None for _ in range(self.longitudeIt.astype(int))] for _ in range(self.latitudeIt.astype(int))]
-        for i in range(0, self.latitudeIt.astype(int)):
-            for j in range(0, self.longitudeIt.astype(int)):
-                croppedImage[i][j] = self.getSatelliteImage(str("{0:.6f}".format(self.latitude[i])),
-                                                            str("{0:.6f}".format(self.longitude[j])))
-        self.imageAdded = self.addImages(croppedImage)
-        self.resolution = self.distanceXY([0, 0], [0, 1])
-
-    def getSatelliteImage(self, lat, lon):
-        if not waterImage.get_waterbody_image(lat, lon):
-            sys.exit("Error: Fetching water bodies images was unsuccesful. EXITING.")
-        else:
-            imageName = 'lakeRecognition/WaterBodiesImages/google-map_' + lat + '_' + lon + '.jpg'
-            imCropped = self.cropImage(imageName)
-            os.remove(imageName)
-            return imCropped
-
-    def satImageProcess(self, image):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-        thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
-        cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
-        cv2.imwrite('WaterBodiesImages/thresh.jpg', thresh)
-        return thresh
-
-    def findLakeContour(self, imageFiltered, originalImage, lakeList):
-        _, contour, hierarchy = cv2.findContours(imageFiltered, cv2.RETR_TREE,
-                                                 cv2.CHAIN_APPROX_NONE)
+        # Let opencv find contours and identifies all different water bodies
+        lakeList = []
+        useless_im, contour, hierarchy = cv2.findContours(processed_im, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         i = 0
         j = []
 
@@ -70,47 +27,52 @@ class Map:
                 j.append(i)
             i += 1
 
-        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), self.resolution)) for i in j]
+        # Creating a lake list with map resolution
+        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), resolution)) for i in j]
 
-        cv2.drawContours(originalImage, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
-        cv2.imwrite('WaterBodiesImages/final.jpg', originalImage)
-        # print("Lake contour detected")
-        return originalImage
+        cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
+        cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
 
-    def addImages(self, images):
-        line = len(images)
-        column = len(images[0])
-        lineAdded = [None for _ in range(line)]
-        for i in range(line):
-            lineAdded[i] = np.hstack(images[i][:])
-        if line > 0:
-            finalImage = np.vstack(lineAdded[:])
-        else:
-            finalImage = lineAdded[0]
-        cv2.imwrite('WaterBodiesImages/imageAdded.jpg', finalImage)
-        # print("Map constructed")
-        return finalImage
+        return map_tile, lakeList, stacked_im, processed_im
 
-    def cropImage(self, imageName):
-        image = cv2.imread(imageName)
-        image = image[19:620, 19:620]
-        return image
+    def process_map_images(self, image):
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+        thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
+        cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
+        cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
+        return thresh
 
+    # Find the (lat, lon) from the given stacked images point
+    # TODO: Change tile  for  actual (lat,lon)
     def xy2LatLon(self, point):
-        xCenter = self.imageAdded.shape[1] // 2 + 1
-        yCenter = self.imageAdded.shape[0] // 2 + 1
-        lon = self.horizontalCenter + (point[0] - xCenter) * self.longNext / 601
-        lat = self.verticalCenter + (yCenter - point[1]) * self.latNext / 601
-        return lat, lon
+        map_xpixel = self.orig_im_tile.xtile * GMAPS_IMAGE_SIZE_REFERENCE.x - GMAPS_IMAGE_SIZE_REFERENCE.x/2 + point[0]
+        map_ypixel = self.orig_im_tile.ytile * GMAPS_IMAGE_SIZE_REFERENCE.y - GMAPS_IMAGE_SIZE_REFERENCE.y/2 + point[1]
+        return pixelcoord_to_latlon(xypixel_to_mapcoordinate(map_xpixel, map_ypixel))
 
-    def distanceXY(self, point1, point2):
-        lat1, lon1 = self.xy2LatLon(point1)
-        lat2, lon2 = self.xy2LatLon(point2)
-        lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    # Calculate the distance between two (lat,lon) in meters
+    def distance(self, p1, p2):
+        lat1, lon1, lat2, lon2 = map(radians, [p1.lat, p1.lon, p2.lat, p2.lon])
         dlon = lon2 - lon1
         dlat = lat2 - lat1
         a = sin(dlat / 2) ** 2 + cos(lat1) * cos(lat2) * sin(dlon / 2) ** 2
         c = 2 * asin(sqrt(a))
-        # Radius of earth in kilometers is 6371
-        km = 6371 * c
-        return km * 1000
+        # Radius of earth: 6371 km
+        distance_meters = 6371000 * c
+        return distance_meters
+
+    # Find actual resolution of the map. meter/px
+    def map_meters_per_pixel(self, base_tile):
+        t1coord = tile_to_latlon(base_tile)
+        t2coord = tile_to_latlon(base_tile._replace(ytile=base_tile.ytile+1))
+        distance_m = self.distance(t1coord, t2coord)
+        return distance_m/GMAPS_IMAGE_SIZE_REFERENCE.x
+
+
+if __name__ == "__main__":
+    coord = tile_to_latlon(latlon_to_tile(Coordinate(47.748424, -72.902954)))
+    print("Initial coord: {}".format(coord))
+    map1 = Map(coord, coord)
+    xylatlon = map1.xy2LatLon([0,0])
+    print("Final coord: {}".format(xylatlon))
+    print("map_pixel: {}".format(map1.orig_im_tile))

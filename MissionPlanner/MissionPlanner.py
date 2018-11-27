@@ -15,6 +15,7 @@ from aStar.Node import Node
 from operator import itemgetter
 from MissionPlanner.MissionPlan import MissionItem, build_simple_mission_item
 from MissionPlanner.LongWeather import LongWeather
+from helpers.GMapsHelper import Coordinate
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +160,7 @@ class MissionPlanner(object):
             i=i+1
         return result
 
-    #Delete the lake with no landing point
+    # Delete the lake with no landing point
     def __sortLakeList(self, lakeList):
         ToDelete = []
         # TODO: Mettre dans une seule for loop
@@ -173,60 +174,48 @@ class MissionPlanner(object):
             logger.error("No point to land between the mission points so the mission is probably impossible")
             sys.exit("ERROR: No point to land between the mission points. The mission is probably impossible.")
 
-    def getLandinggPointNumberByLake(self):
-        count = 0
-        for i in range(len(lakeList)):
-            count = len(lakeList[i].getLandingPoint()) + count
-            logger.info("landingPoints %i",len(lakeList[i].getLandingPoint()))
-        logger.info("Count total: %i",count)
-        # logger.debug("Lon s",lakeList[0].getLandingPoint()[0][0][0])
-        # logger.debug("Lat s",lakeList[0].getLandingPoint()[0][0][1])
-        # logger.debug("Lon e",lakeList[len(lakeList)-1].getLandingPoint()[0][0][0])
-        # logger.debug("Lat e",lakeList[len(lakeList)-1].getLandingPoint()[0][0][1])
-        return count
-
-    #Retourne la liste de lacs avec leurs landing points se trouvant dans la totalité des limites de la mission
+    # Retourne la liste de lacs avec leurs landing points se trouvant dans la totalité des limites de la mission
     def __getTotalLakeList(self, minLat, maxLat, minLong, maxLong):
-        lakeList = []
+        start_coor = Coordinate(minLat, minLong)
+        end_coord = Coordinate(maxLat, maxLong)
 
         #Lake detection
-        map1 = Map(str(minLat),str(minLong), str(maxLat), str(maxLong))
-        imageProcessed = map1.satImageProcess(map1.imageAdded)
-        imageWithContour = map1.findLakeContour(imageProcessed,map1.imageAdded,lakeList)
+        map1 = Map(start_coor, end_coord)
+        [lake.cropContour(map1) for lake in map1.lakeList]
+        [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in map1.lakeList]
 
-        [lake.cropContour(imageProcessed,map1) for lake in lakeList]
+        self.__sortLakeList(map1.lakeList)
+        self.__exportLakesCenter(map1.lakeList)
+        self.__exportLakesContour(map1.lakeList)
+        self.__exportLakesSortPoint(map1.lakeList)
+        self.__exportLakesLandingPoint(map1.lakeList)
 
-        [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in lakeList]
+        return map1.lakeList
 
-        self.__sortLakeList(lakeList)
-
-        self.__exportLakesCenter(lakeList)
-        self.__exportLakesContour(lakeList)
-        self.__exportLakesSortPoint(lakeList)
-        self.__exportLakesLandingPoint(lakeList)
-
-        return lakeList
-
-    #Retourne une liste de lacs avec leurs landing points se trouvant entre les 2 points GPS
+    # Retourne une liste de lacs avec leurs landing points se trouvant entre les 2 points GPS
     def __getLakeList(self, gpsPoint1, gpsPoint2):
-        lakeList = []
+        start_coor = Coordinate(gpsPoint1.get_x, gpsPoint1.get_y)
+        end_coord  = Coordinate(gpsPoint2.get_x, gpsPoint2.get_y)
 
         #Lake detection
-        map1 = Map(str(gpsPoint1.get_x()),str(gpsPoint1.get_y()), str(gpsPoint2.get_x()), str(gpsPoint2.get_y()))
-        imageProcessed = map1.satImageProcess(map1.imageAdded)
-        imageWithContour = map1.findLakeContour(imageProcessed,map1.imageAdded,lakeList)
+        #lakeList, stacked_im, processed_im = find_lake_contour(start_coor, end_coord)
+        map1 = Map(start_coor, end_coord)
 
-        [lake.cropContour(imageProcessed,map1) for lake in lakeList]
+        #map1 = Map(str(gpsPoint1.get_x()),str(gpsPoint1.get_y()), str(gpsPoint2.get_x()), str(gpsPoint2.get_y()))
+        #imageProcessed = map1.satImageProcess(map1.imageAdded)
+        #lakeList = map1.findLakeContour(imageProcessed, map1.imageAdded)
 
-        [lake.findLandingPoint(self.weather.getLongWeather(),int(time.time()), self.__chargingTime*60) for lake in lakeList]
-        self.__sortLakeList(lakeList)
+        [lake.cropContour(map1) for lake in map1.lakeList]
 
-        self.__exportLakesCenter(lakeList)
-        self.__exportLakesContour(lakeList)
-        self.__exportLakesSortPoint(lakeList)
-        self.__exportLakesLandingPoint(lakeList)
+        [lake.findLandingPoint(self.weather.getLongWeather(),int(time.time()), self.__chargingTime*60) for lake in map1.lakeList]
+        self.__sortLakeList(map1.lakeList)
 
-        return lakeList
+        self.__exportLakesCenter(map1.lakeList)
+        self.__exportLakesContour(map1.lakeList)
+        self.__exportLakesSortPoint(map1.lakeList)
+        self.__exportLakesLandingPoint(map1.lakeList)
+
+        return map1.lakeList
 
     # nodeId, distanceEnd,gpsLandingPoint, neighbors
     def node_create(self, lakeList, missionItemStart, missionItemEnd, distanceMax):
@@ -306,7 +295,7 @@ class MissionPlanner(object):
         i=0
         for lake in lakeList:
             for point in lake.getContourPoint():
-                toExport.append([point[0], point[1], i])
+                toExport.append([point.lat, point.lon, i])
                 pass
             i = i + 1
 

@@ -58,8 +58,8 @@ def calcMetereologicalDegree(lat1, long1, lat2, long2):
 # @param $dist  float - distance in kilometers
 # @param $brng  float - bearing in degrees from North line
 def calcGPSDestination(start, dist, brng):
-    lat1 = radians(start[0])
-    lon1 = radians(start[1])
+    lat1 = radians(start.lat)
+    lon1 = radians(start.lon)
     bearing = radians(brng)
     R = constants.rad_earth
 
