@@ -1,6 +1,7 @@
 import sys
 import os.path
 import json
+import csv
 import logging
 from shapely.geometry import Polygon
 from helpers.GPSHelper import distBetweenCoord
@@ -247,20 +248,9 @@ class Mission:
     def set_hoverspeed(self, hoverspeed):
         self.hoverSpeed = hoverspeed
 
+    # Get mission items in simple item format,
+    #    the survey will only be inserted with one simple item at the beguinnig of the survey.
     def get_missionitems(self):
-        missionItemList = []
-        for mItem in self.missionItems:
-            if(mItem.type == "SimpleItem") :
-                if(mItem.command == 16 or mItem.command == 21 or mItem.command == 22) :
-                    missionItemList.append(mItem)
-            elif(mItem.type == "ComplexItem") :
-                for mComplexItem in mItem.transectStyleComplexItem["Items"] :
-                    mComplexItemObj = MissionItem(mComplexItem)
-                    if (mComplexItemObj.command == 16 or mComplexItemObj.command == 21 or mComplexItemObj.command == 22):
-                        missionItemList.append(mComplexItemObj)
-        return missionItemList
-
-    def get_missionitems2(self):
         missionItemList = []
         surveyPointInserted = False
         for mItem in self.missionItems:
@@ -274,13 +264,14 @@ class Mission:
 
         return missionItemList
 
+    # Get mission items
+    # RETURN :  Array of mission items
     def get_brut_missionitems(self):
         return self.missionItems
 
-    def set_missionitems(self, missionitems):
-        self.missionItems = self.__fetch_items(missionitems)
-
-    def set_missionitems2(self, _missionitems):
+    # Set new mission items for the mission, will reconstruct survey(s) if needed
+    # PARAMS _missionitems : Array of simple items
+    def set_missionitems(self, _missionitems):
         # reconstruction des survey ..
         newMissionItems = []
         arrayOfSurvey = []
@@ -357,6 +348,8 @@ class Mission:
     def set_version(self, version):
         self.version = version
 
+    # Get an array of waypoints, surveys are only inserted by one waypoint.
+    # RETURN :  Array of [lat, lon]
     def get_waypoints(self):
         waypoints = []
         surveyPointInserted = False
@@ -386,6 +379,8 @@ class Mission:
         print("number of waypoints : " + str(len(waypoints)))
         return waypoints
 
+    # Fetch all the mission items as simple items, surveys item will be inserted as simple items too
+    # RETURN :  Array of simple mission items
     @staticmethod
     def __fetch_items(items):
         items_arr = []
@@ -404,6 +399,8 @@ class Mission:
 
         return items_arr
 
+    # Fetch all the surveys of the mission
+    # RETURN :  Array of complex mission items
     @staticmethod
     def __fetch_survey_items(items):
         items_arr = []
@@ -625,6 +622,9 @@ def build_survey_mission_item(arrayOfSimpleItems, surveyItem) :
     poly = [[polygon.bounds[0],polygon.bounds[1]], [polygon.bounds[0],polygon.bounds[3]],
              [polygon.bounds[2],polygon.bounds[3]], [polygon.bounds[2],polygon.bounds[1]]]
 
+    with open('Survey' + str(len(arrayOfSimpleItems)) + '.csv', 'w') as f:
+        writer = csv.writer(f)
+        writer.writerows(coords)
 
     return {
             "TransectStyleComplexItem": {

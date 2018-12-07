@@ -33,14 +33,13 @@ class MissionPlanner(object):
         gpsPointsList = plan.get_mission().get_waypoints()
         self.maximalMapPoint = self.__getMaximalMapPoint(gpsPointsList)
         self.nbMissionPoint = len(gpsPointsList)
-        self.initialMissionItemList = plan.get_mission().get_missionitems2()
-        self.missionItemsList2 = plan.get_mission().get_missionitems2()
+        self.initialMissionItemList = plan.get_mission().get_missionitems()
 
         self.timeInMission = time.time() # todo : take from missionSettings
         self.timeSpentInMission = 0
         self.droneSpeed = missionSettings["droneMaxSpeed"] #km/h
 
-        self.weather = LongWeather(self.missionItemsList2[0].get_x(), self.missionItemsList2[0].get_y())
+        self.weather = LongWeather(self.initialMissionItemList[0].get_x(), self.initialMissionItemList[0].get_y())
 
         self.distanceMatrix = self.__getDistanceMatrix()
         self.__missionIndex = 0
@@ -97,9 +96,9 @@ class MissionPlanner(object):
         # TODO: Should become a cost matrix when we will find a way to evaluate a cost
         distanceMatrix = numpy.zeros((self.nbMissionPoint, self.nbMissionPoint))
         i = 0
-        for mItem in self.missionItemsList2:
+        for mItem in self.initialMissionItemList:
             j = 0
-            for mItem2 in self.missionItemsList2:
+            for mItem2 in self.initialMissionItemList:
                 distanceMatrix[i][j] = self.getTimeToFly(mItem, mItem2)
                 j+=1
             i+=1
@@ -163,7 +162,7 @@ class MissionPlanner(object):
         for index in nodeOrder:
             if i < len(nodeOrder) - 1:
                 nextIndex = nodeOrder[i + 1]
-                if(self.missionItemsList2[nextIndex].get_isSurvey()) :
+                if(self.initialMissionItemList[nextIndex].get_isSurvey()) :
                     surveys = self.missionPlan.get_mission().get_surveyItems()
                     surveyItems = surveys[surveyIndex].get_items()
                     print("add node item AND next survey item with coords : : ",
@@ -482,15 +481,20 @@ class MissionPlanner(object):
 
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
         for pairedPoint in pairedMissionPoint:
+            print("Paired points ")
+            print(pairedPoint[0].get_coordinate())
+            print(pairedPoint[1].get_coordinate())
             i=0
             distanceBetweenPoints = pairedPoint[0].distanceTo(pairedPoint[1])
             timeToFlyBetweenPoints = self.getTimeToFly(pairedPoint[0], pairedPoint[1])
 
             #Only get the lakes if we can't go directly to the next point
             if timeToFlyBetweenPoints > self.__currentAutonomy:
+                print("timeToFlyBetweenPoints > __currentAutonomy")
             # if distanceBetweenPoints > self.__charge:
                 startPoint = pairedPoint[0]
                 if self.__currentAutonomy < self.__timeAutonomy:
+                    print("__currentAutonomy > __timeAutonomy")
                     #Find the optimize charging points
                     chargingPoint = self.__findOptimizedChargingPoint(pairedPoint[0], pairedPoint[1], lakeList)
                     self.__addMissionItem(chargingPoint)
