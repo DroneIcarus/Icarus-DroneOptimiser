@@ -2,49 +2,45 @@ import cv2
 from math import radians, cos, sin, asin, sqrt
 from lakeRecognition import waterImage
 from lakeRecognition.lakeClass import Lakes
-from helpers.GMapsHelper import GMAPS_IMAGE_SIZE_REFERENCE, tile_to_latlon, xypixel_to_mapcoordinate, pixelcoord_to_latlon, get_google_maps_image, Coordinate, latlon_to_tile
+from helpers.GMapsHelper import GMAPS_IMAGE_SIZE_REFERENCE, tile_to_latlon, xypixel_to_mapcoordinate, pixelcoord_to_latlon, get_google_maps_image, Coordinate, latlon_to_tile, xytile_to_tilecoordinate, TileCoordinate
 
 
 class Map:
     def __init__(self, start_coord, end_coord):
-        self.orig_im_tile, self.lakeList, self.stacked_im, self.processed_im = self.find_water_contour(start_coord,
-                                                                                                       end_coord)
+        self.orig_im_tile, self.lakeList = self.waterbody_contours(start_coord, end_coord)
 
-    def find_water_contour(self, start_coord, end_coord):
-        # Fetch images between start and end coordinates
-        map_tile, stacked_im = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
-        processed_im = self.process_map_images(stacked_im)
-        resolution = self.map_meters_per_pixel(map_tile)
+    def waterbody_contours(self, start_coord, end_coord):
 
-        # Let opencv find contours and identifies all different water bodies
+        # Get contours for every tile between start-end coordinates
+        map_base_tile, map_contours_hierarchy = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
+
+        contours = []
+        hierarchy = []
+        for ch in map_contours_hierarchy:
+            contours.append(ch[0])
+            hierarchy.append(ch[1])
+
+        # Find resolution using the base tile
+        #resolution = self.map_meters_per_pixel(map_base_tile)
+        resolution = 6.415610451894849
         lakeList = []
-        useless_im, contour, hierarchy = cv2.findContours(processed_im, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
         i = 0
         j = []
 
-        for c in contour:
+        for c in map_contours:
             if (hierarchy[0][i][3] == 0) and (cv2.contourArea(c) > 200):
                 j.append(i)
             i += 1
 
         # Creating a lake list with map resolution
-        [lakeList.append(Lakes(contour[i], cv2.contourArea(contour[i]), resolution)) for i in j]
+        [lakeList.append(Lakes(map_contours[i], cv2.contourArea(contour[i]), resolution)) for i in j]
 
-        cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
-        cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
+        #cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
+        #cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
 
-        return map_tile, lakeList, stacked_im, processed_im
-
-    def process_map_images(self, image):
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-        thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
-        cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
-        cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
-        return thresh
+        return map_base_tile, lakeList
 
     # Find the (lat, lon) from the given stacked images point
-    # TODO: Change tile  for  actual (lat,lon)
     def xy2LatLon(self, point):
         map_xpixel = self.orig_im_tile.xtile * GMAPS_IMAGE_SIZE_REFERENCE.x - GMAPS_IMAGE_SIZE_REFERENCE.x/2 + point[0]
         map_ypixel = self.orig_im_tile.ytile * GMAPS_IMAGE_SIZE_REFERENCE.y - GMAPS_IMAGE_SIZE_REFERENCE.y/2 + point[1]
@@ -69,10 +65,55 @@ class Map:
         return distance_m/GMAPS_IMAGE_SIZE_REFERENCE.x
 
 
+def process_map_images(image):
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+    thresh = cv2.threshold(blurred, 60, 255, cv2.THRESH_BINARY)[1]
+    cv2.rectangle(thresh, (0, 0), (image.shape[1], image.shape[0]), 255, 3)
+    cv2.imwrite('lakeRecognition/WaterBodiesImages/thresh.jpg', thresh)
+    return thresh
+
+
 if __name__ == "__main__":
-    coord = tile_to_latlon(latlon_to_tile(Coordinate(47.748424, -72.902954)))
-    print("Initial coord: {}".format(coord))
-    map1 = Map(coord, coord)
-    xylatlon = map1.xy2LatLon([0,0])
-    print("Final coord: {}".format(xylatlon))
-    print("map_pixel: {}".format(map1.orig_im_tile))
+    a = tile_to_latlon(TileCoordinate(4874, 5711))
+    b = tile_to_latlon(TileCoordinate(4875, 5711))
+
+    Map(a, b)
+
+
+    print("PART 2")
+    import numpy as np
+    start_coord = Coordinate(47.70407055468608, -72.88831261)
+    end_coord = Coordinate(47.76779345, -72.80118764275467)
+    resolution = 6.415610451894849
+
+    im1 = waterImage.get_waterbody(4874, 5711)
+    processed_im1 = process_map_images(im1)
+    useless_im1, contour1, hierarchy1 = cv2.findContours(processed_im1, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    #print(contour1)
+
+    im2 = waterImage.get_waterbody(4875, 5711)
+    processed_im2 = process_map_images(im2)
+    useless_im2, contour2, hierarchy2 = cv2.findContours(processed_im2, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE, offset=(256,0))
+    #print(hierarchy2)
+
+    stacked_im = np.hstack([im1, im2])
+    contour = contour1 + contour2 #np.hstack([contour1, contour2])
+    print(contour)
+    hierarchy = np.hstack([hierarchy1, hierarchy2])
+    #print(hierarchy)
+    lakeList = []
+
+    i = 0
+    j = []
+
+    for c in contour:
+        if (hierarchy[0][i][3] == 0) and (cv2.contourArea(c) > 200):
+            j.append(i)
+        i += 1
+
+    # Creating a lake list with map resolution
+    [lakeList.append(Lakes(contour[x], cv2.contourArea(contour[x]), resolution)) for x in j]
+
+    cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
+    cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
