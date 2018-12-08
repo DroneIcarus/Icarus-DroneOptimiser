@@ -23,7 +23,6 @@ class MissionComplexItem:
         #self.TransectStyleComplexItem.Refly90Degrees = self.transectStyleComplexItem["Refly90Degrees"]
         #self.TransectStyleComplexItem.TurnAroundDistance = self.transectStyleComplexItem["TurnAroundDistance"]
         #self.TransectStyleComplexItem.VisualTransectPoints = self.transectStyleComplexItem["VisualTransectPoints"]
-        #print(self.transectStyleComplexItem['CameraCalc'])
         self.angle = item["angle"]
         self.complexItemType = item["complexItemType"]
         self.entryLocation = item["entryLocation"]
@@ -276,56 +275,41 @@ class Mission:
         newMissionItems = []
         arrayOfSurvey = []
         surveyIndex = 0
-        print("FIRST ONE")
-        print(_missionitems[0].get_coordinate())
-        print(_missionitems[0].get_isSurvey())
         if(len(self.surveyItems) > 0):
             for newItem in _missionitems:
                 if newItem.get_isSurvey() :
                     if newItem.get_surveyIndex() == surveyIndex :
                         arrayOfSurvey.append(newItem)
-                        print("Insert in new survey -- Coords :")
-                        print(newItem.get_coordinate())
                     else :
-                        if (len(arrayOfSurvey) != 0):  # > 2 because of creation of polygon
-                            if (len(arrayOfSurvey) > 2):
-                                print("Build another survey with new settings")
+                        if (len(arrayOfSurvey) != 0):
+                            if (len(arrayOfSurvey) > 2):  # > 2 is the minimum for the creation of the polygon
                                 newMissionItems.append(
                                     ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
                             else:
-                                print("Survey too small, creating new one with new settings")
+                                logger.debug("The rest of the survey too small")
                         else :
                             arrayOfSurvey.clear()
                         arrayOfSurvey.append(newItem)
                         surveyIndex = newItem.get_surveyIndex()
-                        print("Build another survey with new settings")
-                        print("Insert in new survey -- Coords :")
-                        print(newItem.get_coordinate())
                 else :
                     if (len(arrayOfSurvey) != 0) : # > 2 because of creation of polygon
                         if (len(arrayOfSurvey) > 2) :
-                            print("============= BUILD SURVEY =============")
                             newMissionItems.append(
                                 ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
                         else :
-                            print("survey too small")
-                        print("Insert simple item 1 -- Coords :")
-                        print(newItem.get_coordinate())
+                            logger.debug("The rest of the survey too small")
                         newMissionItems.append(newItem)
                         arrayOfSurvey.clear()
 
                     else:
-                        print("Insert simple item 2 -- Coords :")
-                        print(newItem.get_coordinate())
                         newMissionItems.append(newItem)
 
             if (len(arrayOfSurvey) != 0 and len(arrayOfSurvey) > 2):  # > 2 because of creation of polygon
-                print("============= BUILD SURVEY =============")
                 newMissionItems.append(
                     ((build_survey_mission_item(arrayOfSurvey, self.surveyItems[surveyIndex]))))
 
         else : #modifier pour un attribu de la mission?
-            print("No Survey")
+            logger.info("All mission simple items added")
             newMissionItems = _missionitems
 
         self.missionItems = newMissionItems
@@ -360,9 +344,8 @@ class Mission:
             if item.type == "SimpleItem" :
                 if item.get_command() == 16 or item.get_command() == 21 or item.get_command() == 22:
                     if item.get_isSurvey() and not surveyPointInserted :
+                        logger.info("Adding first survey waypoint, no other will be necessary")
                         waypoints.append(item.get_coordinate())
-                        print("SURVEY POINT -- Coords :")
-                        print(item.get_coordinate())
                         surveyPointInserted = True
                     elif not item.get_isSurvey() :
                         waypoints.append(item.get_coordinate())
@@ -376,7 +359,7 @@ class Mission:
                     logger.error("The mission point isn't a valid type.")
                     #sys.exit("ERROR: The mission point %d isn't a valid type."%(idx+1))
 
-        print("number of waypoints : " + str(len(waypoints)))
+        logger.debug("Number of waypoints : " + str(len(waypoints)))
         return waypoints
 
     # Fetch all the mission items as simple items, surveys item will be inserted as simple items too
@@ -487,7 +470,7 @@ class MissionPlan:
             fileName += '.plan'
         with open(fileName, 'w') as outfile:
             json.dump(self.to_json(), outfile, indent=4, sort_keys=True)
-        print('New file is created !')
+        logger.info('New file is created : ' + fileName)
 
     def to_json(self):
         items = []

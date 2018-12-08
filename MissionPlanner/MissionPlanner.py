@@ -154,34 +154,23 @@ class MissionPlanner(object):
         nodeOrder  = self.getMissionPointOrder()
         surveyIndex = 0
         i = 0
-        print("NODE ORDER :")
-        print(nodeOrder)
 
-        print("initial mission item list :")
-        print(self.initialMissionItemList)
         for index in nodeOrder:
             if i < len(nodeOrder) - 1:
                 nextIndex = nodeOrder[i + 1]
                 if(self.initialMissionItemList[nextIndex].get_isSurvey()) :
                     surveys = self.missionPlan.get_mission().get_surveyItems()
                     surveyItems = surveys[surveyIndex].get_items()
-                    print("add node item AND next survey item with coords : : ",
-                          self.initialMissionItemList[index].get_coordinate())
-                    print(self.initialMissionItemList[index].get_isSurvey())
+                    logger.info("Adding survey items as simple items")
                     result.append((self.initialMissionItemList[index], surveyItems[0]))
                     for iterator, item in enumerate(surveyItems) :
                         if(iterator < len(surveyItems) - 1) :
-                            print("add survey items with coords : ", surveyItems[iterator].get_coordinate())
                             result.append((surveyItems[iterator], surveyItems[iterator + 1]))
-                        else :
-                            print("add survey items AND next node with coords : : ", surveyItems[iterator].get_coordinate())
-                            print("add survey items AND next node with coords : : ", self.initialMissionItemList[nextIndex+1].get_coordinate())
-                            result.append((surveyItems[iterator], self.initialMissionItemList[nextIndex+1]))
+                        else : result.append((surveyItems[iterator], self.initialMissionItemList[nextIndex+1]))
                     surveyIndex += 1
                 elif self.initialMissionItemList[index].get_isSurvey() :
-                    print("Nothing to do, already added")
+                    logger.debug("Already inserted index with survey")
                 else :
-                    print("add items with coords : : ", self.initialMissionItemList[index].get_coordinate())
                     result.append((self.initialMissionItemList[index], self.initialMissionItemList[nextIndex]))
             i=i+1
         return result
@@ -482,20 +471,15 @@ class MissionPlanner(object):
 
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
         for pairedPoint in pairedMissionPoint:
-            print("Paired points ")
-            print(pairedPoint[0].get_coordinate())
-            print(pairedPoint[1].get_coordinate())
             i=0
             distanceBetweenPoints = pairedPoint[0].distanceTo(pairedPoint[1])
             timeToFlyBetweenPoints = self.getTimeToFly(pairedPoint[0], pairedPoint[1])
 
             #Only get the lakes if we can't go directly to the next point
             if timeToFlyBetweenPoints > self.__currentAutonomy:
-                print("timeToFlyBetweenPoints > __currentAutonomy")
             # if distanceBetweenPoints > self.__charge:
                 startPoint = pairedPoint[0]
                 if self.__currentAutonomy < self.__timeAutonomy:
-                    print("__currentAutonomy > __timeAutonomy")
                     #Find the optimize charging points
                     chargingPoint = self.__findOptimizedChargingPoint(pairedPoint[0], pairedPoint[1], lakeList)
                     self.__addMissionItem(chargingPoint)
