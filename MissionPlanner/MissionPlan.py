@@ -534,6 +534,12 @@ def is_json(json_file):
         return False
     return True
 
+    # Build a simple mission item
+    # PARAMS lat : latitude of the point
+    # PARAMS lon : longitude of the point
+    # PARAMS item_id : type of the point
+    # PARAMS jumpId : the jumpId
+    # RETURN : simple mission item
 def build_simple_mission_item(lat, lon, item_id, jumpId=999):
     command = 16
     #alt = 50
@@ -564,6 +570,9 @@ def build_simple_mission_item(lat, lon, item_id, jumpId=999):
             "type": "SimpleItem"
         }
 
+    # Build a camera trigger item
+    # PARAMS id : the jumpId
+    # RETURN : camera trigger item
 def build_camera_trigger_item(id) :
     return {
         "autoContinue": True,
@@ -582,6 +591,10 @@ def build_camera_trigger_item(id) :
         "type": "SimpleItem"
     }
 
+    # rebuild a similar survey complex item from the original
+    # PARAMS arrayOfSimpleItems : Array of simple items to include in survey
+    # PARAMS surveyItem : The original survey item to rebuild
+    # RETURN : Complex survey item
 def build_survey_mission_item(arrayOfSimpleItems, surveyItem) :
     points = []
     coords = []
