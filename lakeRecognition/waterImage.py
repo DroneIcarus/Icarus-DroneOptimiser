@@ -40,7 +40,7 @@ def get_waterbody(xtile, ytile, zoom=GMAPS_ZOOM):
         image = maphelper.get_google_maps_image(coordtile)
 
         # Make the transformation from image to landing points
-        contour, hierarchy = __find_waterbody_contour(image)
+        contour, hierarchy = __find_waterbody_contour(image, tilecoord)
 
         if __insert_waterbody_db(tilecoord, contour, hierarchy) is False:
             print("There was an error while inserting tile data to DB. EXITING")
@@ -70,29 +70,27 @@ def get_waterbodies_by_startend(start_coord, end_coord, zoom=GMAPS_ZOOM):
     contours = []
     hierarchies = np.array([])
 
-    rows = []
-    j_it = 0
-    a = 0
+    a = False
     for j in range(y[0], y[1] + 1):
         for i in range(x[0], x[1] + 1):
             c, h = get_waterbody(i, j)
-            if a is 0:
+            if a is False:
+                a = True
                 contours = c
                 hierarchies = h
             contours += c
             hierarchies = np.hstack([hierarchies, h])
-        j_it += 1
 
     map_size = maphelper.MapCoordinate(y[1]-y[0], x[1]-x[0])
     # Creating a picture with rows pictures
     return maphelper.TileCoordinate(x[0], y[0]), map_size, contours, hierarchies
 
 
-def __find_waterbody_contour(wb_image):
+def __find_waterbody_contour(wb_image, tilecoord):
     processed_im = __process_map_images(wb_image)
 
     # Let opencv finds all contour of different water bodies
-    useless_im, contour, hierarchy = cv2.findContours(processed_im, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+    useless_im, contour, hierarchy = cv2.findContours(processed_im, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE, offset=(tilecoord.xtile*256, tilecoord.ytile*256))
     return contour, hierarchy
 
 
