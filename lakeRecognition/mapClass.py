@@ -1,4 +1,5 @@
 import cv2
+import numpy as np
 from math import radians, cos, sin, asin, sqrt
 from lakeRecognition import waterImage
 from lakeRecognition.lakeClass import Lakes
@@ -7,18 +8,15 @@ from helpers.GMapsHelper import GMAPS_IMAGE_SIZE_REFERENCE, tile_to_latlon, xypi
 
 class Map:
     def __init__(self, start_coord, end_coord):
-        self.orig_im_tile, self.lakeList = self.waterbody_contours(start_coord, end_coord)
+        self.orig_im_tile, self.map_size, self.lakeList = self.waterbody_contours(start_coord, end_coord)
+        self.processed_im = np.empty((self.map_size.x*256, self.map_size.y*256), int)
 
     def waterbody_contours(self, start_coord, end_coord):
 
         # Get contours for every tile between start-end coordinates
-        map_base_tile, map_contours_hierarchy = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
-
-        contours = []
-        hierarchy = []
-        for ch in map_contours_hierarchy:
-            contours.append(ch[0])
-            hierarchy.append(ch[1])
+        map_ini_tile, map_size, map_contours, map_hierarchies = waterImage.get_waterbodies_by_startend(start_coord, end_coord)
+        print(map_contours)
+        print(map_hierarchies)
 
         # Find resolution using the base tile
         #resolution = self.map_meters_per_pixel(map_base_tile)
@@ -28,17 +26,18 @@ class Map:
         j = []
 
         for c in map_contours:
-            if (hierarchy[0][i][3] == 0) and (cv2.contourArea(c) > 200):
+            print(c)
+            if (map_hierarchies[0][i][3] == 0) and (cv2.contourArea(c) > 200):
                 j.append(i)
             i += 1
 
         # Creating a lake list with map resolution
-        [lakeList.append(Lakes(map_contours[i], cv2.contourArea(contour[i]), resolution)) for i in j]
+        [lakeList.append(Lakes(map_contours[i], cv2.contourArea(map_contours[i]), resolution)) for i in j]
 
         #cv2.drawContours(stacked_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255))
         #cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', stacked_im)
 
-        return map_base_tile, lakeList
+        return map_ini_tile, map_size, lakeList
 
     # Find the (lat, lon) from the given stacked images point
     def xy2LatLon(self, point):

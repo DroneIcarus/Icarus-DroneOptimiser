@@ -121,7 +121,8 @@ class Lakes:
         self.xCenter = (x2 + x1) // 2
         self.yCenter = (y2 + y1) // 2
         self.centerPoint = mapObject.xy2LatLon([self.xCenter, self.yCenter])
-        self.contourImage = self.mapObject.processed_im[y1:y2, x1:x2]
+        #self.contourImage = self.mapObject.processed_im[y1:y2, x1:x2]
+
         self.lakeContour = self.lakeContour - [x1, y1]
 
     def xy2LatLon(self, point):

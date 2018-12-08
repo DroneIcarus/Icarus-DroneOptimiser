@@ -43,11 +43,11 @@ def get_waterbody(xtile, ytile, zoom=GMAPS_ZOOM):
         contour, hierarchy = __find_waterbody_contour(image)
 
         if __insert_waterbody_db(tilecoord, contour, hierarchy) is False:
-            print("There was an error while inserting tile to DB. EXITING")
+            print("There was an error while inserting tile data to DB. EXITING")
             exit(-1)
         else:
             print("{} has been inserted in the DB".format(tilecoord))
-            return item
+            return contour, hierarchy
 
 
 # Fetch (lat,lon) corresponding tile
@@ -67,18 +67,25 @@ def get_waterbodies_by_startend(start_coord, end_coord, zoom=GMAPS_ZOOM):
     y = sorted([start_tile_coord.ytile, end_tile_coord.ytile])
 
     # Inclusive loop creating tiles array and rows pictures
-    xy_tiles = []
+    contours = []
+    hierarchies = np.array([])
+
     rows = []
     j_it = 0
+    a = 0
     for j in range(y[0], y[1] + 1):
-        xy_tiles.append([])
         for i in range(x[0], x[1] + 1):
-            xy_tiles[j_it].append(get_waterbody(i, j))
-        rows.append(np.hstack(xy_tiles[j_it][:]))
+            c, h = get_waterbody(i, j)
+            if a is 0:
+                contours = c
+                hierarchies = h
+            contours += c
+            hierarchies = np.hstack([hierarchies, h])
         j_it += 1
 
+    map_size = maphelper.MapCoordinate(y[1]-y[0], x[1]-x[0])
     # Creating a picture with rows pictures
-    return maphelper.TileCoordinate(x[0], y[0]), np.vstack(rows[:])
+    return maphelper.TileCoordinate(x[0], y[0]), map_size, contours, hierarchies
 
 
 def __find_waterbody_contour(wb_image):
