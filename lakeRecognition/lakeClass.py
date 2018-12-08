@@ -175,16 +175,17 @@ class Lakes:
 
         imax = self.contourImage.shape[0]
         jmax = self.contourImage.shape[1]
-
         lastJ = 0
         lastI = 0
         idetected = False
         #logger.debug('findLandingPoint..')
-        for i in range(0, imax, 5):
+        iStep = min([100, max([5, int(imax/20)])])
+        jStep = min([100, max([5, int(jmax/20)])])
+        for i in range(0, imax, iStep):
             jdetected = False
 
             if not idetected or (idetected and i >= lastI+25):
-                for j in range(0, jmax, 5):
+                for j in range(0, jmax, jStep):
                     if not jdetected or (jdetected and j >= lastJ+25):
                         if (i + point2[0] >= 0 and j + point2[1] >= 0 and i + point3[0] >= 0 and j + point3[1] >= 0):
                             if i + point2[0] < imax and j + point2[1] < jmax and i + point3[0] < imax and j + point3[1] < jmax:
