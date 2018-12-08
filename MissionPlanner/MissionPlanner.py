@@ -477,6 +477,7 @@ class MissionPlanner(object):
         #Plan a mission between each pairedPoint
         pairedMissionPoint = self.__getPairedMissionPoints()
         #Add the starting missionPoint
+        self.__addMissionItem(pairedMissionPoint[0][0])
         #Get all the landing point
 
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
@@ -530,7 +531,7 @@ class MissionPlanner(object):
              #   writer = csv.writer(f)
               #  writer.writerows(self.resultingWay)
 
-        self.missionPlan.mission.set_missionitems2(self.finalMissionItemList)
+        self.missionPlan.mission.set_missionitems(self.finalMissionItemList)
         with open(self.exportPath + 'completeMission.csv', 'w') as f:
             writer = csv.writer(f)
             writer.writerows(self.resultingWay)
