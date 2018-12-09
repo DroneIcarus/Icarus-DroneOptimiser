@@ -33,8 +33,11 @@ class Map:
         processed_im = np.zeros((map_size.x * 256, map_size.y * 256, 3), np.uint8)
         processed_im[:] = (255, 255, 255)
 
-        #cv2.drawContours(processed_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255), thickness=cv2.FILLED, offset=(-map_ini_tile.xtile*256, -map_ini_tile.ytile*256))
-        cv2.fillPoly(processed_im, pts=[lake.lakeContour for lake in lakeList], color=(0, 0, 0), offset=(-map_ini_tile.xtile*256, -map_ini_tile.ytile*256))
+        #cv2.drawContours(processed_im, [lake.lakeContour for lake in lakeList], -1, (0, 0, 255), thickness=cv2.FILLED,
+        #                 offset=(-map_ini_tile.xtile * 256, -map_ini_tile.ytile * 256))
+        cv2.fillPoly(processed_im, pts=[lake.lakeContour for lake in lakeList], color=(0, 0, 0),
+                     offset=(-map_ini_tile.xtile * 256, -map_ini_tile.ytile * 256))
+        cv2.erode(processed_im, np.ones((4, 4)), processed_im)
         cv2.imwrite('lakeRecognition/WaterBodiesImages/final.jpg', processed_im)
 
         return map_ini_tile, map_size, lakeList, processed_im
