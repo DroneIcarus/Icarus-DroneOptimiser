@@ -413,19 +413,19 @@ class MissionPlanner(object):
     def __addMissionItem(self, missionItem):
 
         if missionItem.getID() == 'charging':
-            newItemWait = MissionItem(build_simple_mission_item(missionItem.get_x(), missionItem.get_x(), 'wait'))
-            newItemWait.setID('wait')
+            newItemSleep = MissionItem(build_simple_mission_item(missionItem.get_x(), missionItem.get_x(), 'sleep'))
+            newItemSleep.setID('sleep')
             takeoffCoordinate = missionItem.landingPoint.gpsDeriveCoordinate
             newItemTakeOff = MissionItem(build_simple_mission_item(takeoffCoordinate[0], takeoffCoordinate[1], 'takeoff'))
             newItemTakeOff.setID('takeoff')
             self.__setTimeSpentInMission(missionItem)
             self.finalMissionItemList.append(missionItem)
-            self.__setTimeSpentInMission(newItemWait)
-            self.finalMissionItemList.append(newItemWait)
+            self.__setTimeSpentInMission(newItemSleep)
+            self.finalMissionItemList.append(newItemSleep)
             self.finalMissionItemList.append(newItemTakeOff)
 
             self.resultingWay.append([missionItem.get_x(), missionItem.get_y(), missionItem.get_name()])
-            self.resultingWay.append([newItemWait.get_x(), newItemWait.get_y(), newItemWait.get_name()])
+            self.resultingWay.append([newItemSleep.get_x(), newItemSleep.get_y(), newItemSleep.get_name()])
             self.resultingWay.append([newItemTakeOff.get_x(), newItemTakeOff.get_y(), newItemTakeOff.get_name()])
         else:
             self.__setTimeSpentInMission(missionItem)
@@ -524,3 +524,4 @@ class MissionPlanner(object):
 
         timeHour = int(self.timeSpentInMission/60)
         timeMin = self.timeSpentInMission - (timeHour*60)
+        logger.info("The mission should take %d hour, %d min "%(timeHour,timeMin))
