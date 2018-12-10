@@ -226,8 +226,23 @@ class Lakes:
                                 lastJ = j
                                 lastI = i
 
+
+                                # dst = cv2.Mat.zeros(jmax, imax, cv2.CV_8UC3)
+                                dst = np.copy(self.contourImage)
+                                dst3 = np.zeros((jmax, imax, 3), np.uint8)
+                                dst2 = np.zeros((jmax, imax, 3), np.uint8)
+                                useless_im, contour, hierarchy = cv2.findContours(dst, cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
+                                cv2.drawContours(dst2, contour, -1, (0, 255, 0), 1)
+
+                                for c in contour:
+                                    cv2.drawContours(dst3, [c], -1, (0, 255, 0), 1)
+                                    cv2.fillConvexPoly(dst3, c, (0, 0, 255))
+                                # cv2.circle(dst, (i, j), 20, (0,255,0),-1)
+                                cv2.imwrite("lakeRecognition/test/" + "vector_" + str(i) + "_" + str(j) + "_a.jpg", self.contourImage)
+                                cv2.imwrite("lakeRecognition/test/" + "vector_" + str(i) + "_" + str(j) + "_b.jpg", dst3)
+
                                 #To check the deriveVector
-                                cv2.fillConvexPoly(self.contourImage, point, (122,122,122))
+                                # cv2.fillConvexPoly(self.contourImage, point, (122,122,122))
                                 # cv2.imwrite("WaterBodiesImages/" + "vector.jpg", tempImage3)
 
         for lp in self.landingPoint:

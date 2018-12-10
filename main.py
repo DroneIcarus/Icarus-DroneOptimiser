@@ -1,6 +1,7 @@
 #If you ever want to try it in command line:
 #python3 main.py "test.plan" "testGenerated"
-#python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'
+#python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'
+#python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'
 #python3 main.py "survey.plan" "surveyGenerated.plan" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'
 
 
@@ -53,7 +54,8 @@ if __name__ == "__main__":
     # mp.getMissionPointGraph()
     # mp.getMissionPointOrder()
 
-    mp.run()
+    # mp.run()
+    mp.test()
 
     # Once we have all the intermediates waypoints we can rewrite the mission
     plan.write_to_file(sys.argv[2])

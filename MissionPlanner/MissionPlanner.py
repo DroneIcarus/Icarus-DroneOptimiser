@@ -16,6 +16,7 @@ from operator import itemgetter
 from MissionPlanner.MissionPlan import MissionItem, build_simple_mission_item
 from MissionPlanner.LongWeather import LongWeather
 from helpers.GMapsHelper import Coordinate
+import cv2
 
 logger = logging.getLogger(__name__)
 
@@ -207,9 +208,11 @@ class MissionPlanner(object):
 
         #Lake detection
         map1 = Map(start_coor, end_coord)
+        print('len(lakelist',len(map1.lakeList))
         [lake.cropContour(map1) for lake in map1.lakeList]
+        print('findLandingPoint begin')
         [lake.findLandingPoint(self.weather.getLongWeather(), int(time.time()), self.__chargingTime*60) for lake in map1.lakeList]
-
+        print('findLandingPoint end')
         self.__sortLakeList(map1.lakeList)
         self.__exportLakesCenter(map1.lakeList)
         self.__exportLakesContour(map1.lakeList)
@@ -479,8 +482,9 @@ class MissionPlanner(object):
         #Add the starting missionPoint
         self.__addMissionItem(pairedMissionPoint[0][0])
         #Get all the landing point
-
+        print('__getTotalLakeList begin')
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
+        print('__getTotalLakeList done')
         for pairedPoint in pairedMissionPoint:
             print("Paired points ")
             print(pairedPoint[0].get_coordinate())
@@ -538,3 +542,24 @@ class MissionPlanner(object):
 
         timeHour = int(self.timeSpentInMission/60)
         timeMin = self.timeSpentInMission - (timeHour*60)
+
+    def test(self):
+        print('test')
+        img = cv2.imread('test2.jpg')
+        img1 = cv2.imread('test2.jpg', 1)
+        img2 = img1.copy()
+        img = cv2.cvtColor(img1,cv2.COLOR_BGR2GRAY)
+
+        #--- Blur the gray scale image
+        img = cv2.GaussianBlur(img,(5, 5),0)
+
+        #--- Perform Canny edge detection (in my case lower = 84 and upper = 255, because I resized the image, may vary in your case)
+        lower = 84
+        upper = 255
+        edges = cv2.Canny(img, lower, upper)
+
+        _, contours, _ = cv2.findContours(edges, cv2.RETR_TREE, 1)
+        rep = cv2.drawContours(img1, contours, -1, (0, 255, 0), 10)
+
+        cv2.imwrite("testRes.jpg", edges)
+        cv2.imwrite("testRes2.jpg", rep)
