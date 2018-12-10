@@ -547,9 +547,9 @@ def build_simple_mission_item(lat, lon, item_id, jumpId=999):
     param1 = None
     if item_id == "start" or item_id == "takeoff":
         command = 22
-    elif item_id == "wait":
-        command = 93
-        param1 = 3600
+    elif item_id == "sleep":
+        command = 3002
+        param1 = 3600000 # 60 min --> max charging time in milli-seconds
     elif item_id == 'charging':
         command = 21
 
