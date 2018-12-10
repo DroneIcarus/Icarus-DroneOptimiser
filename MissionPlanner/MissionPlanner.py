@@ -366,11 +366,13 @@ class MissionPlanner(object):
                     landingMissionPoint = MissionItem(build_simple_mission_item(landingCoordinate[0], landingCoordinate[1], "charging"))
                     landingMissionPoint.setID('charging')
                     landingMissionPoint.setLandingPoint(landingPoint)
+
                     timeToStart = self.getTimeToFly(landingMissionPoint, start)
-                    if timeToStart < self.__currentAutonomy and distEnd < nearestDist:
-                        nearestPoint = landingMissionPoint
-                        nearestDist = distEnd
-                        pass
+                    #if timeToStart < self.__currentAutonomy and distEnd < nearestDist:
+                     #   nearestPoint = landingMissionPoint
+                      #  nearestDist = distEnd
+                       # pass
+                    nearestPoint = landingMissionPoint
                 pass
         return nearestPoint
 
