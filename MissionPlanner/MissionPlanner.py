@@ -168,7 +168,7 @@ class MissionPlanner(object):
                             result.append((surveyItems[iterator], surveyItems[iterator + 1]))
                         else : result.append((surveyItems[iterator], self.initialMissionItemList[nextIndex+1]))
                     surveyIndex += 1
-                elif self.initialMissionItemList[index].get_isSurvey() :
+                elif self.initialMissionItemList[index].get_isSurvey():
                     logger.debug("Already inserted index with survey")
                 else :
                     result.append((self.initialMissionItemList[index], self.initialMissionItemList[nextIndex]))
@@ -361,19 +361,18 @@ class MissionPlanner(object):
             for lake in lakeList:
                 for landingPoint in lake.landingList:
                     landingCoordinate = landingPoint.gpsLandingCoordinate
-                # for landingPoint in lake.gpsLandingPoint:
                     distEnd = distBetweenCoord(landingCoordinate[0], landingCoordinate[1], end.get_x(), end.get_y())
+                    # print('distEnd', distEnd)
                     landingMissionPoint = MissionItem(build_simple_mission_item(landingCoordinate[0], landingCoordinate[1], "charging"))
                     landingMissionPoint.setID('charging')
                     landingMissionPoint.setLandingPoint(landingPoint)
 
                     timeToStart = self.getTimeToFly(landingMissionPoint, start)
-                    #if timeToStart < self.__currentAutonomy and distEnd < nearestDist:
-                     #   nearestPoint = landingMissionPoint
-                      #  nearestDist = distEnd
-                       # pass
-                    nearestPoint = landingMissionPoint
-                pass
+                    if timeToStart < self.__currentAutonomy and distEnd < nearestDist:
+                       # print('nearestDist', nearestDist)
+                       nearestPoint = landingMissionPoint
+                       nearestDist = distEnd
+                    # nearestPoint = landingMissionPoint
         return nearestPoint
 
     def __getMaximalMapPoint(self, gpsPointsList):
@@ -464,36 +463,36 @@ class MissionPlanner(object):
         self.__addMissionItem(end)
 
     def run(self):
-        logger.debug('run')
+        print('=====================================')
         #Plan a mission between each pairedPoint
         pairedMissionPoint = self.__getPairedMissionPoints()
+
         #Add the starting missionPoint
         self.__addMissionItem(pairedMissionPoint[0][0])
-        #Get all the landing point
 
+        #Get all the landing point
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
+
         for pairedPoint in pairedMissionPoint:
-            i=0
-            distanceBetweenPoints = pairedPoint[0].distanceTo(pairedPoint[1])
+            #Get the time needed to get to the next mission point
             timeToFlyBetweenPoints = self.getTimeToFly(pairedPoint[0], pairedPoint[1])
 
-            #Only get the lakes if we can't go directly to the next point
+            #If we can't go directly to the next point
             if timeToFlyBetweenPoints > self.__currentAutonomy:
-            # if distanceBetweenPoints > self.__charge:
                 startPoint = pairedPoint[0]
                 if self.__currentAutonomy < self.__timeAutonomy:
                     #Find the optimize charging points
                     chargingPoint = self.__findOptimizedChargingPoint(pairedPoint[0], pairedPoint[1], lakeList)
                     self.__addMissionItem(chargingPoint)
-                    # self.__createAndAddMissionItem(chargingPoint[0], chargingPoint[1], "charging")
-
                     self.__resetAutonomy()
 
                     #After the charging, execute aStar from the charging point
                     startPoint = MissionItem(build_simple_mission_item(chargingPoint.get_x(),chargingPoint.get_y(),"start"))
+
+                    #Really important to set the ID to start because it's use in the A* algorithm
                     startPoint.setID('start')
 
-                #Once we have every findLandingPoint and the start point and end point we can generate a graph for A* and run it
+                #Once we have every landing points, the start point and end point we can generate a graph for A* and run it
                 success, result = self.__runAStar(startPoint, pairedPoint[1], lakeList)
 
                 if success:
