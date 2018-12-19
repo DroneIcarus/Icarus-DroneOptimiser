@@ -148,30 +148,30 @@ class MissionPlanner(object):
         plt.show()
 
     #Retourne une liste de paire de coordonnees GPS equivalent au debut et a la fin de petite mission
-    #Exemple si l'ordre des points de mission est A, C B - La liste retournee sera [(A,C),(C,B)]
+    #Exemple si l'ordre des points de mission est A, C, B - La liste retournee sera [(A,C),(C,B)]
     def __getPairedMissionPoints(self):
         result = []
         nodeOrder  = self.getMissionPointOrder()
         surveyIndex = 0
         i = 0
-
         for index in nodeOrder:
             if i < len(nodeOrder) - 1:
                 nextIndex = nodeOrder[i + 1]
-                if(self.initialMissionItemList[nextIndex].get_isSurvey()) :
-                    surveys = self.missionPlan.get_mission().get_surveyItems()
-                    surveyItems = surveys[surveyIndex].get_items()
-                    logger.info("Adding survey items as simple items")
-                    result.append((self.initialMissionItemList[index], surveyItems[0]))
-                    for iterator, item in enumerate(surveyItems) :
-                        if(iterator < len(surveyItems) - 1) :
-                            result.append((surveyItems[iterator], surveyItems[iterator + 1]))
-                        else : result.append((surveyItems[iterator], self.initialMissionItemList[nextIndex+1]))
-                    surveyIndex += 1
-                elif self.initialMissionItemList[index].get_isSurvey():
-                    logger.debug("Already inserted index with survey")
-                else :
-                    result.append((self.initialMissionItemList[index], self.initialMissionItemList[nextIndex]))
+                # if(self.initialMissionItemList[nextIndex].get_isSurvey()) :
+                #     surveys = self.missionPlan.get_mission().get_surveyItems()
+                #     surveyItems = surveys[surveyIndex].get_items()
+                #     logger.info("Adding survey items as simple items")
+                #     result.append((self.initialMissionItemList[index], surveyItems[0]))
+                #     for iterator, item in enumerate(surveyItems) :
+                #         if(iterator < len(surveyItems) - 1) :
+                #             result.append((surveyItems[iterator], surveyItems[iterator + 1]))
+                #         else : result.append((surveyItems[iterator], self.initialMissionItemList[nextIndex+1]))
+                #     surveyIndex += 1
+                # elif self.initialMissionItemList[index].get_isSurvey():
+                #     logger.debug("Already inserted index with survey")
+                # else :
+                #     result.append((self.initialMissionItemList[index], self.initialMissionItemList[nextIndex]))
+            result.append((self.initialMissionItemList[index], self.initialMissionItemList[nextIndex]))
             i=i+1
         return result
 
@@ -362,7 +362,6 @@ class MissionPlanner(object):
                 for landingPoint in lake.landingList:
                     landingCoordinate = landingPoint.gpsLandingCoordinate
                     distEnd = distBetweenCoord(landingCoordinate[0], landingCoordinate[1], end.get_x(), end.get_y())
-                    # print('distEnd', distEnd)
                     landingMissionPoint = MissionItem(build_simple_mission_item(landingCoordinate[0], landingCoordinate[1], "charging"))
                     landingMissionPoint.setID('charging')
                     landingMissionPoint.setLandingPoint(landingPoint)
@@ -372,7 +371,6 @@ class MissionPlanner(object):
                        # print('nearestDist', nearestDist)
                        nearestPoint = landingMissionPoint
                        nearestDist = distEnd
-                    # nearestPoint = landingMissionPoint
         return nearestPoint
 
     def __getMaximalMapPoint(self, gpsPointsList):
@@ -474,6 +472,8 @@ class MissionPlanner(object):
         lakeList = self.__getTotalLakeList(self.maximalMapPoint[0], self.maximalMapPoint[1], self.maximalMapPoint[2], self.maximalMapPoint[3])
 
         for pairedPoint in pairedMissionPoint:
+
+
             #Get the time needed to get to the next mission point
             timeToFlyBetweenPoints = self.getTimeToFly(pairedPoint[0], pairedPoint[1])
 
