@@ -1,6 +1,10 @@
 import urllib.parse
 import urllib.request
 import json
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 
 def getYahooWeather(latitude, longitude):
@@ -16,7 +20,6 @@ def getYahooWeather(latitude, longitude):
     weather_yql_url = weather_baseurl + urllib.parse.urlencode({'q': weather_yql_query}) + "&format=json"
     weather_result = urllib.request.urlopen(weather_yql_url).read().decode('utf-8')
     weather_data = json.loads(weather_result)
-    # print(weather_data)
     return weather_data
 
 
@@ -34,9 +37,14 @@ def getOpenWeather(latitude, longitude):
     windSpeed = []
     windDirection = []
     cloudCover = []
+    logger.debug("Weather data : ")
+    logger.debug(currentWeather_data)
     time.append(int(currentWeather_data["dt"]))
     windSpeed.append(float(currentWeather_data["wind"]["speed"]))
-    windDirection.append(float(currentWeather_data["wind"]["deg"]))
+    if hasattr(currentWeather_data["wind"], 'deg'):
+        windDirection.append(float(currentWeather_data["wind"]["deg"]))
+    else :
+        windDirection.append(float(0))
     cloudCover.append(int(currentWeather_data["clouds"]["all"]))
 
     for i in range(1, len(forecast_data["list"]) + 1):
@@ -46,5 +54,5 @@ def getOpenWeather(latitude, longitude):
         cloudCover.append(int(forecast_data["list"][i - 1]["clouds"]["all"]))
 
     weatherDict = {"time": time, "windSpeed": windSpeed, "windDirection": windDirection, "cloudCover": cloudCover}
-    # print("Weather data recovered")
+    logger.info("Weather data recovered")
     return weatherDict

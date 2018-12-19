@@ -45,6 +45,7 @@ def aStar(allNodes):
     # add start_position to the queue
     openList.append(ItemList(allNodes['start']))
 
+    logger.debug("openList : " + str(len(openList)))
     # while the open list is not empty
     while len(openList) != 0:
         # pop the node with the lowest cost off the queue
@@ -70,6 +71,8 @@ def aStar(allNodes):
         # l = sorted(openList, key=lambda k: k['cost'])
         openList = sorted(openList, key=lambda x: x.cost, reverse=False)
 
+    logger.debug("closelist")
+    logger.debug(closeList)
     result = reconstructWay(closeList)
     return success, result
 

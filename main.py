@@ -1,6 +1,7 @@
 #If you ever want to try it in command line:
 #python3 main.py "test.plan" "testGenerated"
-#python3 main.py "testPlanVol/test4.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'
+#python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'
+#python3 main.py "survey.plan" "surveyGenerated.plan" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'python3 main.py "TestsFonctionnels/test3-Longue_mission.plan" "testGenerated" '{"droneAutonomy":12,"droneChargeEfficiency":0.2,"droneChargingTime":60,"droneMaxSpeed":40,"keepOrder":true,"missionDate":"15-11-2018 12:00:00"}'
 
 
 import sys, os
@@ -43,6 +44,8 @@ if __name__ == "__main__":
 
     logger.debug("mission settings : " + sys.argv[3])
     missionSettingsStr = sys.argv[3]
+    #missionSettingsStr = '{"droneAutonomy": 12, "droneChargeEfficiency": 0.2, "droneChargingTime": 60, "droneMaxSpeed": 40, "keepOrder": true,"missionDate": "15-11-2018 12:00:00"}'
+
     missionSettings = json.loads(missionSettingsStr)
 
 

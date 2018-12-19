@@ -1,21 +1,21 @@
 import cv2
-import sys, os.path
 import numpy as np
-from math import radians, degrees, cos, sin, sqrt
-from helpers.GPSHelper import bearingQuadrantAngle, calcBearing, calcGPSDestination, distBetweenCoord
-from operator import itemgetter
+from math import radians, cos, sin, sqrt
+from helpers.GPSHelper import calcBearing, calcGPSDestination, distBetweenCoord
 
 debugMode = False
-
+#logger = logging.getLogger(__name__)
 
 def debug(str):
     if debugMode:
         print(str)
 
+
 class LandingPoint:
     def __init__(self, landingLat, landingLong, deriveLat, deriveLong):
         self.gpsLandingCoordinate = (landingLat, landingLong) #array of size 2
         self.gpsDeriveCoordinate = (deriveLat, deriveLong)
+
 
 class Lakes:
     def __init__(self, lakeContour, lakeArea, resolution):
@@ -54,22 +54,6 @@ class Lakes:
             minLat = minLatLP.gpsLandingCoordinate
             maxLong = maxLongLP.gpsLandingCoordinate
             minLong = minLatLP.gpsLandingCoordinate
-
-
-            # maxLat = max(gpsListPoint,key=itemgetter(0))
-            # minLat = min(gpsListPoint,key=itemgetter(0))
-            # maxLong = max(gpsListPoint,key=itemgetter(1))
-            # minLong = min(gpsListPoint,key=itemgetter(1))
-
-            # maxLatIndex = gpsListPoint.index(max(gpsListPoint,key=itemgetter(0)))
-            # minLatIndex = gpsListPoint.index(min(gpsListPoint,key=itemgetter(0)))
-            # maxLongIndex = gpsListPoint.index(max(gpsListPoint,key=itemgetter(1)))
-            # minLongIndex = gpsListPoint.index(min(gpsListPoint,key=itemgetter(1)))
-            #
-            # derivePoints.append(self.gpsDerivePoint[maxLatIndex])
-            # derivePoints.append(self.gpsDerivePoint[minLatIndex])
-            # derivePoints.append(self.gpsDerivePoint[maxLongIndex])
-            # derivePoints.append(self.gpsDerivePoint[minLongIndex])
 
             points.append(maxLatLP)
             points.append(minLatLP)
@@ -116,13 +100,11 @@ class Lakes:
         top = self.yCenter - (self.width/2)
 
         bottomRight = self.mapObject.xy2LatLon([right, bottom])
-        bottomLeft = self.mapObject.xy2LatLon([left, bottom])
-        topRight = self.mapObject.xy2LatLon([right, top])
-        topLeft = self.mapObject.xy2LatLon([left, top])
-        centerLeft = self.mapObject.xy2LatLon([left, self.yCenter])
-        centerRight = self.mapObject.xy2LatLon([right, self.yCenter])
-        centerTop = self.mapObject.xy2LatLon([self.xCenter, top])
-        center = self.mapObject.xy2LatLon([self.xCenter, self.yCenter])
+        bottomLeft  = self.mapObject.xy2LatLon([left, bottom])
+        topRight    = self.mapObject.xy2LatLon([right, top])
+        topLeft     = self.mapObject.xy2LatLon([left, top])
+        center      = self.mapObject.xy2LatLon([self.xCenter, self.yCenter])
+
         points.append(center)
         points.append(bottomRight)
         points.append(bottomLeft)
@@ -130,23 +112,16 @@ class Lakes:
         points.append(topLeft)
 
         return points
-        # print("centerPoint: ", self.centerPoint)
-        # print("bottomRight", bottomRight)
-        # print("bottomLeft", bottomLeft)
-        # print("topRight", topRight)
-        # print("topLeft", topLeft)
-        # print("centerRight", centerRight)
-        # print("centerLeft", centerLeft)
-        # print("centerTop", centerTop)
 
-    def cropContour(self, imProcessed, mapObject):
+    # Find the contour of the water body
+    def cropContour(self, mapObject):
         self.mapObject = mapObject
         x1, y1 = self.lakeContour.min(axis=0)[0]
         x2, y2 = self.lakeContour.max(axis=0)[0]
         self.xCenter = (x2 + x1) // 2
         self.yCenter = (y2 + y1) // 2
         self.centerPoint = mapObject.xy2LatLon([self.xCenter, self.yCenter])
-        self.contourImage = imProcessed[y1:y2, x1:x2]
+        self.contourImage = self.mapObject.processed_im[y1:y2, x1:x2]
         self.lakeContour = self.lakeContour - [x1, y1]
 
     def xy2LatLon(self, point):
@@ -200,16 +175,17 @@ class Lakes:
 
         imax = self.contourImage.shape[0]
         jmax = self.contourImage.shape[1]
-
         lastJ = 0
         lastI = 0
         idetected = False
-
-        for i in range(0, imax, 5):
+        #logger.debug('findLandingPoint..')
+        iStep = min([100, max([5, int(imax/20)])])
+        jStep = min([100, max([5, int(jmax/20)])])
+        for i in range(0, imax, iStep):
             jdetected = False
 
             if not idetected or (idetected and i >= lastI+25):
-                for j in range(0, jmax, 5):
+                for j in range(0, jmax, jStep):
                     if not jdetected or (jdetected and j >= lastJ+25):
                         if (i + point2[0] >= 0 and j + point2[1] >= 0 and i + point3[0] >= 0 and j + point3[1] >= 0):
                             if i + point2[0] < imax and j + point2[1] < jmax and i + point3[0] < imax and j + point3[1] < jmax:
@@ -254,24 +230,14 @@ class Lakes:
                                 cv2.fillConvexPoly(self.contourImage, point, (122,122,122))
                                 # cv2.imwrite("WaterBodiesImages/" + "vector.jpg", tempImage3)
 
-
-
         for lp in self.landingPoint:
             self.contourImage[lp[0], lp[1]] = 255
 
-        cv2.imwrite("WaterBodiesImages/" + str(self.centerPoint) + ".jpg", self.contourImage)
-        # print(len(self.landingPoint))
-        # print("There is %d landing point" % (len(self.gpsLandingPoint)))
+        cv2.imwrite("lakeRecognition/WaterBodiesImages/{},{}.jpg".format(self.centerPoint.lat, self.centerPoint.lon), self.contourImage)
         return self.landingList
 
     def getLandingPoint(self):
-        # temp= []
-        # temp.append([self.centerPoint])
-        # return temp
-
         return self.landingList
-
-        # return self.getContourPoint()
 
     def getLakeCenter(self):
         return self.centerPoint
